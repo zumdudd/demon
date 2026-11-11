@@ -243,6 +243,8 @@ def save_gif(frames, path, crop=None):
     big = Image.new('RGB', (fr[0].width, fr[0].height * min(len(fr), 12)))
     for i, f in enumerate(fr[::max(1, len(fr) // 12)][:12]): big.paste(f, (0, i * fr[0].height))
     pal = big.quantize(colors=96, method=Image.Quantize.MEDIANCUT)
+    P = pal.getpalette(); n = len(P) // 3                                     # keep the background exact (no off-shade box)
+    k = min(range(n), key=lambda i: sum((P[i * 3 + j] - BG[j]) ** 2 for j in range(3))); P[k * 3:k * 3 + 3] = list(BG); pal.putpalette(P)
     q = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in fr]
     q[0].save(path, save_all=True, append_images=q[1:], duration=int(1000 / FPS), loop=0, optimize=True, disposal=1)
     return os.path.getsize(path)

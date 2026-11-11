@@ -8,4 +8,7 @@ https://creativecommons.org/licenses/by/4.0/
 You may share and adapt them, also commercially, as long as you credit:
 `ДЕМОН / ПОДМЕНЫШ by ШУМ (shum) · github.com/zumdudd`
 
+The showcase music in `media/track/` (and its copies in `docs/`) is by **ШУМ × Claude**, synthesized from scratch with no samples,
+also under CC BY 4.0. Credit: `music: ШУМ × Claude · github.com/zumdudd`.
+
 The code is under the MIT license (see `LICENSE`).
