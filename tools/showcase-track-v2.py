@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
 # music: ШУМ × Claude, synthesized from scratch, CC BY 4.0
-"""showcase-track v1: the showcase song, synthesized in numpy. No samples, no outside audio.
+"""showcase-track v2: the showcase song, synthesized in numpy. No samples, no outside audio.
+v2: the kick rebuilt (sub / body / click layers, exponential pitch dive onto A1 = 55 Hz, styles per section) + sidechain ducking of the bass.
+v1: first version (its kick sat at 73-164 Hz: MIDI numbers one octave too high).
 
 Eight sections, D minor, one original motif that travels through them. Each section is a whole number of bars
 and is written twice: as a seamless loop (its tail wrapped onto its start) and as part of the chained track.
 
-    python3 tools/showcase-track-v1.py OUTDIR
+    python3 tools/showcase-track-v2.py OUTDIR
 
 OUTDIR gets: track.wav, loops/NN-name.wav, map.json (sections, every kick / snare / hat, vocal spans, scene cues).
 """
@@ -81,12 +83,34 @@ def reverb(x, size=2.2, wet=0.25, damp=6000):
     return out
 
 # ------------------------------------------------------------------ drums
-def kick(hard=0.0, tune=48, tau=0.32):
-    n = N(0.6); t = secs(n); f = hz(tune) + (180 + 200 * hard) * np.exp(-t / 0.035)
-    x = np.sin(2 * np.pi * np.cumsum(f) / SR) * env_exp(n, tau)
-    x += 0.4 * hp(rng.standard_normal(n), 3000) * env_exp(n, 0.004)
-    if hard: x = np.tanh(x * (1 + 6 * hard)) * 0.85
-    return x
+KICK_F0 = 55.0                                                             # A1, the fifth of D minor (kick tuned to the key)
+KICK_STYLE = dict(                                                         # pitch dive (octaves, tau), amp (hold, decay), click, body drive
+    soft=dict(oct=3.5, ptau=0.030, hold=0.010, tau=0.18, click=0.25, drive=1.6),    # hyperpop, the build
+    hard=dict(oct=4.0, ptau=0.022, hold=0.015, tau=0.24, click=0.55, drive=5.0),    # industrial
+    drop=dict(oct=4.5, ptau=0.030, hold=0.030, tau=0.42, click=0.45, drive=2.6),    # dubstep
+    four=dict(oct=3.8, ptau=0.020, hold=0.008, tau=0.14, click=0.35, drive=2.0))    # the nightcore four-on-floor
+def kick(style='soft', f0=KICK_F0):
+    """three layers, the way kick synthesis guides build it: a clean sine sub, a saturated body for harmonics,
+    a noise + tight-pitch click for the transient. The pitch dives exponentially (in octaves) onto f0."""
+    k = KICK_STYLE[style]; n = N(0.9); t = secs(n)
+    f = f0 * 2 ** (k['oct'] * np.exp(-t / k['ptau']))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    amp = np.where(t < k['hold'], 1.0, np.exp(-(t - k['hold']) / k['tau']))
+    osc = np.sin(ph) * amp
+    sub = lp(osc, 110, 4)                                                  # stays clean: distortion never touches the sub
+    body = np.tanh(hp(osc, 90) * k['drive']) / np.tanh(k['drive']) * 0.55
+    ct = 2 ** (6 * np.exp(-t / 0.004))
+    click = (bp(rng.standard_normal(n), 2000, 9000) * np.exp(-t / 0.0035) + 0.6 * np.sin(2 * np.pi * np.cumsum(f0 * ct) / SR) * np.exp(-t / 0.006)) * k['click']
+    x = sub + body + click
+    return x / (np.abs(x).max() + 1e-9)
+def duck(n, times, depth=0.7, attack=0.004, release=0.18):
+    """sidechain: the bass dips under each kick so they don't fight in the low end."""
+    g = np.ones(n); t = secs(N(release * 4))
+    shape = 1 - depth * np.exp(-t / release) * np.minimum(1, t / attack)
+    for at in times:
+        i = N(at); m = min(len(shape), n - i)
+        if m > 0: g[i:i + m] = np.minimum(g[i:i + m], shape[:m])
+    return g
 def snare(noise=0.7, tone=190, tau=0.16, dirt=0.0):
     n = N(0.45); t = secs(n)
     x = noise * bp(rng.standard_normal(n), 1200, 9000) * env_exp(n, tau) + (1 - noise) * np.sin(2 * np.pi * tone * t) * env_exp(n, 0.06)
@@ -111,11 +135,15 @@ class Sec:
         self.beat = 60 / bpm; self.dur = bars * 4 * self.beat; self.tail = 3.0
         self.buf = np.zeros((N(self.dur + self.tail), 2))
         self.hits = dict(kick=[], snare=[], hat=[]); self.vocal = []; self.parts = []
+        self.bass = np.zeros_like(self.buf)
     def b(self, bar, beat=0.0): return (bar * 4 + beat) * self.beat           # time of bar / beat (beats from 0)
     def hit(self, kind, at, x, gain=1.0, pan=0.5):
         add(self.buf, st(x * gain, pan), at)
         if kind in self.hits: self.hits[kind].append(round(at, 4))
     def note(self, x, at, gain=1.0): add(self.buf, x * gain, at)
+    def bassnote(self, x, at, gain=1.0): add(self.bass, x * gain, at)
+    def mixbass(self, depth=0.7, release=0.18):
+        self.buf += self.bass * duck(len(self.bass), self.hits['kick'], depth, release=release)[:, None]; self.bass[:] = 0
 
 # the motif (original): two bars of 8ths in D minor, None = rest
 MOTIF = [81, None, 77, 74, 76, 77, None, 81, 79, None, 77, 76, 74, None, None, None,
@@ -160,7 +188,7 @@ def s_build():
     while t < gap_at:                                                         # snare roll 4ths → 8ths → 16ths → 32nds
         k = t / gap_at; step = s.beat / (1 if k < 0.25 else 2 if k < 0.5 else 4 if k < 0.8 else 8)
         s.hit('snare', t, snare(0.75, 200, 0.09), 0.25 + 0.55 * k, 0.5); t += step
-    for bt in range(15): s.hit('kick', s.b(0, bt), kick(0.2), 0.7 if bt % 4 == 0 else 0.0)
+    for bt in range(0, 15, 4): s.hit('kick', s.b(0, bt), kick('soft'), 0.7)
     n = N(gap_at); tt = secs(n)
     riser = bp(rng.standard_normal(n), 400, 5000) * (tt / gap_at) ** 3 * 0.12
     sweep = np.sin(2 * np.pi * np.cumsum(hz(38) * 2 ** (tt / gap_at * 3)) / SR) * (tt / gap_at) * 0.25
@@ -179,19 +207,20 @@ def s_deli():
     s = Sec('deli', 140, 8, 'slam', 0.95, ['delikates', 'krik', 'detonatsiya', 'detonatsiya'], 'ДЕЛИКАТЕС · industrial')
     kpat = [0, 0.75, 1.5, 2.5, 3.25]                                          # broken, not four-on-floor
     for bar in range(8):
-        for bt in kpat: s.hit('kick', s.b(bar, bt), kick(0.9, 40, 0.28), 1.0)
+        for bt in kpat: s.hit('kick', s.b(bar, bt), kick('hard'), 1.0)
         for bt in (1, 3): s.hit('snare', s.b(bar, bt), snare(0.9, 170, 0.22, dirt=0.8), 0.9)
         if bar % 2: s.hit('snare', s.b(bar, 3.75), snare(0.95, 0, 0.05, dirt=1.0), 0.6)
         for e in range(8): s.hit('hat', s.b(bar, e / 2), hat(0.02), 0.5 if e % 2 else 0.25, 0.65)
         # bass: one note, crushed and screaming
         L = N(s.b(1)); f = hz(26 if bar % 4 < 3 else 25)
         bass = np.tanh(saw(f, L) * 4) * adsr(L, 0.005, 0.1, 0.8, 0.05)
-        s.note(st(lp(crush(bass, 5, 2), 2500) * 0.35), s.b(bar))
+        s.bassnote(st(lp(crush(bass, 5, 2), 2500) * 0.35), s.b(bar))
         # shouts with no words: formant noise on the 2-and and 4 (the "voice as a drum")
         for bt in ((1.5, 3) if bar % 2 == 0 else (1.5, 2.75, 3.5)):
             Lv = N(0.18); src = rng.standard_normal(Lv) + 0.6 * saw(hz(50), Lv)
             v = sum(bp(src, fc * 0.85, fc * 1.15) for fc in (700, 1150, 2600)) * env_exp(Lv, 0.08)
             s.note(st(np.tanh(v * 3) * 0.22, 0.45), s.b(bar, bt)); s.vocal.append([round(s.b(bar, bt), 3), round(s.b(bar, bt) + 0.18, 3)])
+    s.mixbass(0.75, 0.16)
     s.buf = lp(np.tanh(s.buf * 1.3) * 0.9, 9000)                              # grit stays, the fizz goes
     return s
 
@@ -200,14 +229,14 @@ def s_lure():
     s = Sec('lure', 160, 8, 'loud', 0.62, ['primanka', 'kukla', 'dva-litsa'], 'ПРИМАНКА · hyperpop')
     for bar in range(8):
         dark = bar in (3, 7)                                                  # two bars where the mask slips
-        for bt in (0, 2.5) if not dark else (0, 1, 2, 2.5, 3): s.hit('kick', s.b(bar, bt), kick(0.3 if not dark else 0.85, 50, 0.25), 0.8)
+        for bt in (0, 2.5) if not dark else (0, 1, 2, 2.5, 3): s.hit('kick', s.b(bar, bt), kick('soft' if not dark else 'hard'), 0.8)
         for bt in (1, 3): s.hit('snare', s.b(bar, bt), clap(), 0.7)
         for e in range(16 if bar % 2 else 8): s.hit('hat', s.b(bar, e / (4 if bar % 2 else 2)), hat(0.015), 0.3, 0.3 + 0.4 * (e % 2))
         root = PROG[bar % 4][0] - 12
         L = N(s.b(1)); f0 = hz(root - 12)
         glide = f0 * (1 + 0.5 * np.exp(-secs(L) / 0.03))
         b808 = np.tanh(np.sin(2 * np.pi * np.cumsum(glide) / SR) * (1.5 if not dark else 4)) * adsr(L, 0.002, 0.2, 0.7, 0.1)
-        s.note(st(b808 * 0.45), s.b(bar))
+        s.bassnote(st(b808 * 0.45), s.b(bar))
         for k in range(8):                                                    # bell arp
             m = PROG[bar % 4][k % 3] + 24 + (12 if k >= 6 else 0)
             s.note(st(fm_bell(hz(m), N(0.5), 2.0, 1.5, 0.18) * 0.09, 0.2 + 0.6 * (k % 2)), s.b(bar, k / 2))
@@ -218,6 +247,7 @@ def s_lure():
             v = (square(hz(m), L) * 0.5 + saw(hz(m + 12), L) * 0.25) * adsr(L, 0.004, 0.05, 0.7, 0.03)
             if rep in (1, 3) and i >= 24: v = crush(v, 4, 8)                  # the dark core shows through
             s.note(st(lp(v, 7000) * 0.17, 0.5), at); s.vocal.append([round(at, 3), round(at + s.beat / 2, 3)])
+    s.mixbass(0.6, 0.15)
     s.buf = reverb(s.buf, 1.4, 0.18)[:len(s.buf)]
     return s
 
@@ -229,7 +259,7 @@ def s_nightcore(lure, r=1.30):
     sped = np.stack([np.interp(idx, np.arange(len(src) + 1), np.append(src[:, c], src[0, c])) for c in range(2)], 1)
     s.buf[:len(sped)] += sped * 0.85
     for bar in range(8):                                                      # the four-on-floor every nightcore edit adds
-        for bt in range(4): s.hit('kick', s.b(bar, bt), kick(0.4, 52, 0.18), 0.6)
+        for bt in range(4): s.hit('kick', s.b(bar, bt), kick('four'), 0.6)
         for bt in (1, 3): s.hits['snare'].append(round(s.b(bar, bt), 4))
         for e in range(8): s.hits['hat'].append(round(s.b(bar, e / 2 + 0.25), 4)); add(s.buf, st(hat(0.012) * 0.25, 0.7), s.b(bar, e / 2 + 0.25))
     s.vocal = [[round(a / r, 3), round(b / r, 3)] for a, b in lure.vocal]
@@ -246,8 +276,8 @@ def s_drop(prev):
     s.buf[:rew_len] += rew[:rew_len] * 0.7
     rates = [2, 2, 4, 4, 3, 3, 8, 1]                                          # wobbles per beat, per bar
     for bar in range(1, 8):
-        s.hit('kick', s.b(bar, 0), kick(1.0, 38, 0.4), 1.0)
-        if bar % 2 == 0: s.hit('kick', s.b(bar, 2.75), kick(1.0, 38, 0.3), 0.8)
+        s.hit('kick', s.b(bar, 0), kick('drop'), 1.0)
+        if bar % 2 == 0: s.hit('kick', s.b(bar, 2.75), kick('drop'), 0.8)
         s.hit('snare', s.b(bar, 2), snare(0.85, 180, 0.25, dirt=0.4), 1.0)
         for e in range(8): s.hit('hat', s.b(bar, e / 2), hat(0.02), 0.25, 0.6)
         L = N(s.b(1)); f = hz(26 + (3 if bar in (3, 7) else 0)); tt = secs(L)
@@ -261,7 +291,8 @@ def s_drop(prev):
             out[i:i + B], zi = signal.sosfilt(so, src[i:i + B], zi=zi)
         wob = np.tanh(out * 2.5) * adsr(L, 0.003, 0.05, 0.9, 0.02)
         sub = np.sin(2 * np.pi * f * tt) * adsr(L, 0.003, 0.05, 0.9, 0.02)
-        s.note(st(wob * 0.32 + sub * 0.3), s.b(bar))
+        s.bassnote(st(wob * 0.32 + sub * 0.3), s.b(bar))
+    s.mixbass(0.8, 0.2)
     s.buf = lp(np.tanh(s.buf * 1.2) * 0.92, 10000)
     return s
 
