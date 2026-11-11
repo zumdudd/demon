@@ -1,0 +1,507 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA v29.2 :: ДЕМОН in the terminal. Same frame engine as the desktop pet (sprite.js port).
+# MINT adapter m1 (crossover guest ЗАРЯ ⇢ SLMAEVE): AMD k10temp + NVIDIA GPU in stats, no 5-min timer hint.
+# MINT adapter m2: survives terminal resizes (redraws on SIGWINCH instead of painting at stale rows).
+#   zarya-daemon                    static header
+#   zarya-daemon -a                 entrance: glitch in, blink, glance around (~0.8 s)
+#   zarya-daemon -e RRGGBB -- L1 L2 L3   custom eye colour + header lines (zarya-greet)
+#   zarya-daemon --react ok|fail TITLE BODY   short reaction (shell hook, after long jobs)
+#   zarya-daemon --hold N -e RRGGBB -- L1 L2 L3   greeting: the pet printed N lines up stays alive and
+#                                      clickable until the first key, which is handed to bash
+#   zarya-daemon --live  (alias: pet)  lives in the terminal: idles, blinks, eye follows the mouse,
+#                                      sleeps, scans while jobs run, shows kitchen timers.
+#                                      space = poke · t = 5-min timer · q / Esc = leave
+import os, sys, time, random, platform, select, glob, re, signal
+
+_resized = [False]                     # MINT m2: set by SIGWINCH, handled in the hold / live loops
+def _on_winch(*_): _resized[0] = True
+
+W, H = 20, 16
+OX, OY = 3, 4
+C = dict(V='#7B4DFF', L='#9D7BFF', D='#07060D', G='#8FD9A8', P='#F29AB4', X='#FF5C8A', B='#E4E0EA',
+         dim='#3A3450', tiredV='#5A3FB0', tiredL='#6E5BB4', tiredG='#5E8F70')
+BODY = ['..V........V..', '..VV......VV..', '..VVVVVVVVVV..', '.VLLLLLLLLLLV.',
+        '.VDDDDDDDDDDV.', '.VDDDDDDDDDDV.', '.VVVVVVVVVVVV.', '.VVVVVVVVVVVV.']
+HORNS_B = ['.V..........V.', '..VV......VV..']
+FRINGE = [['.V.VV.VVV.V.V.', '.V..V..V....V.'], ['.VV.V.VV.VV.V.', '..V....V..V...']]
+ZG = ['##.', '..#', '.#.', '..#', '##.']
+EYE = dict(info=C['G'], ok=C['G'], warn=C['P'], crit=C['X'])
+VOID = (12, 10, 20)
+
+
+def build(s):
+    """Port of sprite.js buildFrame. Returns [x, y, w, h, '#hex', alpha]."""
+    t = s.get('t', 0.0); mode = s.get('mode', 'idle'); g = s.get('glitch', 0.0)
+    out = []; dx = dy = 0; squash = False
+    if mode == 'poke':
+        if t < 0.15: dy, squash = 1, True
+        elif t < 0.3: dy = -1
+    elif mode == 'work':
+        dy = -1 if int(t / 0.3) % 2 else 0
+    elif mode == 'ring':
+        dx = 1 if int(t / 0.08) % 2 else -1
+    if g > 0.3 and mode != 'ring':
+        dx += round((random.random() - 0.5) * 2)
+    phase = int(t / (0.25 if mode == 'work' else 0.6)) % 2
+    rows = list(BODY)
+    if mode == 'idle' and phase and int(t / 0.6) % 6 == 1: rows = HORNS_B + BODY[2:]
+    if squash: rows = ['..............', '..VV......VV..'] + BODY[2:]
+    rows = rows + (FRINGE[0] if mode == 'sleep' else FRINGE[phase])
+    tired = s.get('tired'); hot = s.get('hot')
+    vio = C['tiredV'] if tired else C['V']; lit = C['tiredL'] if tired else C['L']
+    col = lambda ch: vio if ch == 'V' else lit if ch == 'L' else C['D']
+    def px(x, y, c, a=1.0): out.append([OX + x + dx, OY + y + dy, 1, 1, c, a])
+    gl = 2 if g > 0.5 else 1
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch == '.': continue
+            out.append([OX + x + dx - gl, OY + y + dy, 1, 1, C['P'], 0.85])
+            if g > 0.15: out.append([OX + x + dx + 1, OY + y + dy, 1, 1, C['G'], 0.35])
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch != '.': px(x, y, col(ch))
+    eye = s.get('eye') or EYE.get(s.get('level', 'info'), C['G'])
+    if hot and mode != 'ring': eye = C['X'] if int(t / 0.2) % 3 else C['P']
+    if tired and not hot and mode in ('idle', 'sleep'): eye = C['tiredG']
+    vx = lambda n: 2 + n
+    if mode == 'sleep':
+        for n in range(1, 9): px(vx(n), 5, C['dim'])
+        p = (t / 3) % 1; zx = 16 + round(p); zy = round(5 - p * 5)
+        for y, r in enumerate(ZG):
+            for x, ch in enumerate(r):
+                if ch == '#': out.append([zx + x, zy + y, 1, 1, C['L'], 0.95 * (1 - p * 0.8)])
+    elif mode in ('timer', 'ring'):
+        if mode == 'ring':
+            on = int(t / 0.25) % 2
+            for n in range(10): px(vx(n), 4, C['X'] if on else C['G']); px(vx(n), 5, C['X'] if on else C['G'])
+        else:
+            p = max(0.0, min(1.0, s.get('progress', 1.0)))
+            n = -(-int(p * 1000) // 100); c = C['P'] if p < 0.1 else C['G']
+            for i in range(n): px(vx(i), 4, c); px(vx(i), 5, c)
+            if n > 0 and int(t / 0.5) % 2: px(vx(n - 1), 4, C['D'])
+    elif mode == 'work':
+        per = 1.2; u = (t % per) / per; f = u * 2 if u < 0.5 else 2 - u * 2
+        x = round(f * 8); back = -1 if u < 0.5 else 1
+        if 0 <= x + back <= 8: px(vx(x + back), 4, C['G'], 0.35); px(vx(x + back), 5, C['G'], 0.35)
+        for xx in (x, x + 1): px(vx(xx), 4, C['G']); px(vx(xx), 5, C['G'])
+    elif mode == 'poke':
+        if t < 0.35:
+            for n in range(2, 8): px(vx(n), 4, C['G']); px(vx(n), 5, C['G'])
+        else:
+            for b in (2, 6): px(vx(b), 5, C['G']); px(vx(b + 1), 4, C['G']); px(vx(b + 2), 5, C['G'])
+    elif mode == 'alert':
+        big = int(t / 0.3) % 2
+        for n in range(4 - big, 6 + big): px(vx(n), 4, eye); px(vx(n), 5, eye)
+    else:
+        ux, uy = s.get('pupil', (0, 0))
+        c = max(0, min(8, round(4 + ux * 4)))
+        if s.get('blink'):
+            px(vx(c), 5, eye); px(vx(c + 1), 5, eye)
+        elif uy < -0.55:
+            px(vx(c), 4, eye); px(vx(c + 1), 4, eye)
+        elif uy > 0.55:
+            px(vx(c), 5, eye); px(vx(c + 1), 5, eye)
+        else:
+            for xx in (c, c + 1): px(vx(xx), 4, eye); px(vx(xx), 5, eye)
+    if hot:
+        for hx in (2, 11):
+            for k in range(2):
+                p = ((t / 1.4) + k * 0.5 + hx * 0.13) % 1
+                y = round(-1 - p * 4)
+                if OY + y + dy >= 0: out.append([OX + hx + dx + k, OY + y + dy, 1, 1, C['B'], 0.55 * (1 - p)])
+    if g > 0.05:
+        pal = [eye, C['V'], C['G'], C['P']]
+        for _ in range(round(2 + g * 4)):
+            out.append([random.randrange(8), 3 + random.randrange(11), 3 + random.randrange(9), 1,
+                        random.choice(pal), 0.55 * max(0.4, g)])
+    return out
+
+
+def rgb(h): return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def raster(rects, y0, y1):
+    """Composite rects onto a pixel grid (alpha over the void colour; faint pixels skipped)."""
+    grid = [[None] * W for _ in range(y1 - y0)]
+    for x, y, w, h, c, a in rects:
+        if a < 0.25: continue
+        col = rgb(c)
+        for yy in range(int(y), int(y + h)):
+            for xx in range(int(x), int(x + w)):
+                if y0 <= yy < y1 and 0 <= xx < W:
+                    base = grid[yy - y0][xx] or VOID
+                    grid[yy - y0][xx] = col if a >= 0.95 else tuple(round(col[i] * a + base[i] * (1 - a)) for i in range(3))
+    return grid
+
+
+def cell(t, b):
+    R = '\x1b[0m'; f = lambda c: f'{c[0]};{c[1]};{c[2]}'
+    if t is None and b is None: return ' '
+    if t is None: return f'\x1b[38;2;{f(b)}m▄{R}'
+    if b is None: return f'\x1b[38;2;{f(t)}m▀{R}'
+    if t == b: return f'\x1b[38;2;{f(t)}m█{R}'
+    return f'\x1b[38;2;{f(t)};48;2;{f(b)}m▀{R}'
+
+
+def render(rects, info, y0=OY, y1=OY + 10):
+    grid = raster(rects, y0, y1)
+    lines = []
+    for i in range(0, len(grid), 2):
+        top = grid[i]; bot = grid[i + 1] if i + 1 < len(grid) else [None] * W
+        line = ''.join(cell(a, b) for a, b in zip(top, bot))
+        if i // 2 in info: line += '  ' + info[i // 2]
+        lines.append(line)
+    return lines
+
+
+def draw(lines, first, n_prev):
+    o = sys.stdout
+    if not first and n_prev: o.write(f'\x1b[{n_prev}A')
+    for l in lines: o.write('\r\x1b[2K' + l + '\n')
+    o.flush()
+
+
+BONE, DIM, R = '\x1b[1;38;2;228;224;234m', '\x1b[38;2;150;143;166m', '\x1b[0m'
+GRN, PINK, HOT = '\x1b[38;2;143;217;168m', '\x1b[38;2;242;154;180m', '\x1b[38;2;255;92;138m'
+
+
+def hexeye(h):
+    h = h.lstrip('#'); return '#' + h.upper() if re.fullmatch(r'[0-9a-fA-F]{6}', h) else None
+
+
+def entrance(info, eye):
+    tty = sys.stdout.isatty()
+    seq = []
+    for f in range(5): seq.append(dict(mode='idle', t=0.0, glitch=0.9 - f * 0.18, eye=eye))
+    seq += [dict(mode='idle', t=0.0, eye=eye, blink=True)] * 2
+    for px_ in (-0.9, -0.9, 0.9, 0.9, 0.0): seq.append(dict(mode='idle', t=0.0, eye=eye, pupil=(px_, 0)))
+    final = render(build(dict(mode='idle', t=0.0, eye=eye)), info)
+    if not tty:
+        for l in final: print(l)
+        return
+    sys.stdout.write('\x1b[?25l')
+    try:
+        n = 0
+        for i, st in enumerate(seq):
+            ls = render(build(st), info); draw(ls, i == 0, n); n = len(ls)
+            time.sleep(0.05 if i < 5 else 0.07)
+        draw(final, False, n)
+    finally:
+        sys.stdout.write('\x1b[?25h'); sys.stdout.flush()
+
+
+def react(kind, title, body):
+    ok = kind == 'ok'
+    info = {1: (GRN if ok else PINK) + title + R, 2: DIM + body + R}
+    mode, lvl = ('poke', 'ok') if ok else ('alert', 'warn')
+    if not sys.stdout.isatty():
+        for l in render(build(dict(mode=mode, t=0.6, level=lvl)), info): print(l)
+        return
+    sys.stdout.write('\x1b[?25l')
+    try:
+        n = 0; t0 = time.time(); i = 0
+        while (t := time.time() - t0) < 0.9:
+            ls = render(build(dict(mode=mode, t=t, level=lvl, glitch=0 if ok else max(0, 0.8 - t))), info)
+            draw(ls, i == 0, n); n = len(ls); i += 1; time.sleep(0.06)
+        draw(render(build(dict(mode='poke' if ok else 'alert', t=0.6, level=lvl)), info), False, n)
+    finally:
+        sys.stdout.write('\x1b[?25h'); sys.stdout.flush()
+
+
+# ---------------- live mode ----------------
+def rd(p):
+    try:
+        with open(p) as f: return f.read()
+    except OSError: return ''
+
+
+def stats():
+    out = []
+    for h in glob.glob('/sys/class/hwmon/hwmon*'):
+        if rd(h + '/name').strip() == 'coretemp':
+            for l in glob.glob(h + '/temp*_label'):
+                if rd(l).startswith('Package'):
+                    try: out.append(f'CPU {int(rd(l.replace("_label", "_input"))) // 1000}°')
+                    except ValueError: pass
+        if rd(h + '/name').strip() == 'k10temp' and not any(o.startswith('CPU') for o in out):   # MINT m1: AMD
+            for l in sorted(glob.glob(h + '/temp*_label')):
+                if rd(l).strip() in ('Tctl', 'Tdie'):
+                    try: out.append(f'CPU {int(rd(l.replace("_label", "_input"))) // 1000}°'); break
+                    except ValueError: pass
+    g = gpu_temp()
+    if g: out.append(f'GPU {g}°')
+    mi = dict(re.findall(r'^(\w+):\s+(\d+)', rd('/proc/meminfo'), re.M))
+    if 'MemTotal' in mi:
+        t, a = int(mi['MemTotal']), int(mi['MemAvailable'])
+        out.append(f'RAM {(t - a) / 1048576:.1f}/{t / 1048576:.1f} GB')
+    for b in glob.glob('/sys/class/power_supply/BAT*'):
+        st = rd(b + '/status').strip()
+        out.append(f'BAT {rd(b + "/capacity").strip()}%' + (' ↑' if st in ('Charging', 'Full') else ''))
+    return ' · '.join(out)
+
+
+_gpu = [0.0, None]
+def gpu_temp():
+    """MINT m1: NVIDIA temperature, cached 5 s (nvidia-smi costs ~40 ms)."""
+    if time.time() - _gpu[0] > 5:
+        _gpu[0] = time.time()
+        try:
+            import subprocess
+            r = subprocess.run(['nvidia-smi', '--query-gpu=temperature.gpu', '--format=csv,noheader,nounits'],
+                               capture_output=True, text=True, timeout=2)
+            _gpu[1] = int(r.stdout.split()[0]) if r.returncode == 0 and r.stdout.strip() else None
+        except Exception:
+            _gpu[1] = None
+    return _gpu[1]
+
+
+def desktop_state():
+    """Mirror the desktop pet: running jobs in other shells, kitchen timers."""
+    home = os.path.expanduser('~/.cache/zarya-daemon')
+    now = time.time(); timer = None; job = None
+    for f in sorted(glob.glob(home + '/timers/*-*')):
+        m = re.match(r'(\d+)-', os.path.basename(f))
+        if not m: continue
+        st, _, lab = rd(f).partition('\t')
+        end = int(m.group(1))
+        try: start = float(st)
+        except ValueError: start = now
+        if end > now: timer = (end, start, (lab.strip() or 'ТАЙМЕР').upper()); break
+    for f in glob.glob(home + '/jobs/*'):
+        pid = os.path.basename(f)
+        if not pid.isdigit() or int(pid) == os.getppid() or not os.path.exists('/proc/' + pid): continue
+        st, _, cmd = rd(f).partition('\n')
+        try:
+            if now - float(st) >= 3 and cmd.split() and cmd.split()[0] not in ('claude', 'vim', 'nvim', 'nano', 'ssh', 'btop', 'htop', 'less', 'man'):
+                job = (cmd.strip(), now - float(st)); break
+        except ValueError: pass
+    return timer, job
+
+
+def live():
+    import termios, tty
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        print('pet needs a terminal'); return
+    fd = sys.stdin.fileno(); old = termios.tcgetattr(fd)
+    o = sys.stdout
+    o.write('\x1b[?25l\x1b[?1003h\x1b[?1006h'); o.flush()      # hide cursor, report mouse motion (SGR)
+    tty.setcbreak(fd)
+    signal.signal(signal.SIGWINCH, _on_winch)                   # MINT m2
+    rows = 8                                                     # full canvas: room for з and steam
+    # where am I on screen? ask the terminal (DSR) for the cursor row so the eye can aim at the mouse
+    o.write('\n' * rows + f'\x1b[{rows}A\x1b[6n'); o.flush()
+    top = None; buf = ''
+    r, _, _ = select.select([fd], [], [], 0.3)
+    if r:
+        buf = os.read(fd, 64).decode(errors='ignore')
+        m = re.search(r'\x1b\[(\d+);(\d+)R', buf)
+        if m: top = int(m.group(1))
+    t0 = time.time(); last_in = time.time(); fx = None; mouse = None
+    glitch = 0.8; blink_t = 0.0; next_blink = 2.5; n = 0; first = True; sleeping = False
+    try:
+        while True:
+            now = time.time(); t = now - t0
+            if _resized[0]:                                              # MINT m2: terminal reflowed, start clean at the top
+                _resized[0] = False
+                o.write('\x1b[H\x1b[2J' + '\n' * rows + f'\x1b[{rows}A'); first = True; n = 0
+                o.write('\x1b[6n'); o.flush(); top = None
+            try:
+                r, _, _ = select.select([fd], [], [], 0.1)
+            except InterruptedError:
+                continue
+            if r:
+                data = os.read(fd, 256).decode(errors='ignore')
+                cp = re.findall(r'\x1b\[(\d+);(\d+)R', data)                   # MINT m2: answer to the re-query
+                if cp and top is None: top = int(cp[-1][0])
+                data = re.sub(r'\x1b\[\d+;\d+R', '', data)
+                for m in re.finditer(r'\x1b\[<(\d+);(\d+);(\d+)([Mm])', data):
+                    b, cx, cy, kind = int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4)
+                    mouse = (cx, cy); last_in = now
+                    if kind == 'M' and b in (0, 1, 2) and top and top <= cy < top + rows and cx <= W:
+                        fx = ('poke', now); glitch = 0.4                    # click on him = poke
+                keys = re.sub(r'\x1b\[<[\d;]+[Mm]', '', data)
+                if keys: last_in = now
+                if 'q' in keys or keys == '\x1b': break
+                if ' ' in keys or '\r' in keys or '\n' in keys: fx = ('poke', now); glitch = 0.4
+                if 't' in keys:
+                    os.system(f'{os.path.expanduser("~/.local/bin/zt")} 5m > /dev/null 2>&1'); fx = ('poke', now)
+            timer, job = desktop_state()
+            was_sleeping = sleeping
+            sleeping = now - last_in > 45 and not timer and not job
+            if was_sleeping and not sleeping: fx = ('poke', now); glitch = 0.5     # wakes up
+            blink_t = max(0.0, blink_t - 0.1); next_blink -= 0.1
+            if next_blink <= 0: blink_t = 0.15; next_blink = 2.5 + random.random() * 5
+            glitch = glitch * 0.8 if glitch > 0.03 else 0.0
+            if random.random() < 0.004: glitch = 0.6
+            pupil = (0, 0)
+            if mouse and top:
+                ex, ey = OX + 2 + 5 + 1, top + 4                                   # eye cell on screen
+                dx, dy = (mouse[0] - ex) / 2.0, (mouse[1] - ey)               # cells are ~2:1
+                L = (dx * dx + dy * dy) ** 0.5 or 1; k = min(1, L / 12)
+                pupil = (dx / L * k, dy / L * k)
+            st = dict(t=t, glitch=glitch, pupil=pupil, blink=blink_t > 0)
+            title = 'ДЕМОН'; body = stats()
+            if fx and now - fx[1] < 0.9:
+                st.update(mode='poke', t=now - fx[1]); title = 'ДЕМОН НА СВЯЗИ'
+            elif job:
+                st.update(mode='work'); title = 'РАБОТА'; body = f'RUNNING {job[0][:30]} · {int(job[1])}s'
+            elif timer:
+                end, start, lab = timer
+                st.update(mode='timer', progress=(end - now) / max(1, end - start))
+                left = int(end - now); title = f'ТАЙМЕР · {lab}'; body = f'{left // 60:02d}:{left % 60:02d} LEFT'
+            elif sleeping:
+                st.update(mode='sleep'); title = 'СОН'; body = 'ZZZ. MOVE THE MOUSE OR PRESS A KEY.'
+            else:
+                st.update(mode='idle')
+            info = {2: BONE + title + R, 3: DIM + body + R,
+                    5: '\x1b[38;2;110;103;135m' + 'SPACE / CLICK: POKE · Q: LEAVE' + R}
+            ls = render(build(st), info, 0, H)
+            draw(ls, first, n); n = len(ls); first = False
+    except KeyboardInterrupt:
+        pass
+    finally:
+        o.write('\x1b[?1003l\x1b[?1006l\x1b[?25h'); o.flush()
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+# ---------------- hold: the greeting pet stays alive until you type ----------------
+REACTIONS = [('ЭЙ!', 'HEY.'), ('Я ВИЖУ ТЕБЯ', 'I SEE YOU.'), ('НЕ ТРОГАЙ СТЕНУ', "DON'T TOUCH THE WALL."),
+             ('СВЯЗЬ УСТАНОВЛЕНА', 'LINK ESTABLISHED.'), ('ЕЩЁ РАЗ?', 'AGAIN?'), ('ДЕМОН НА СВЯЗИ', None)]
+
+
+def parse_input(data):
+    """Split raw tty input into (mouse events, cursor reports, typed text, saw_key)."""
+    mice = [(int(a), int(b), int(c), k) for a, b, c, k in re.findall(r'\x1b\[<(\d+);(\d+);(\d+)([Mm])', data)]
+    cpr = [(int(a), int(b)) for a, b in re.findall(r'\x1b\[(\d+);(\d+)R', data)]
+    rest = re.sub(r'\x1b\[<[\d;]+[Mm]|\x1b\[\d+;\d+R', '', data)
+    saw = bool(rest)
+    rest = re.sub(r'\x1b\[[0-9;?]*[ -/]*[@-~]|\x1bO.|\x1b.', '', rest)            # arrows, F-keys, Alt+x
+    first_line = rest.replace('\r', '\n').split('\n')[0]
+    text = ''.join(ch for ch in first_line if ch.isprintable())
+    return mice, cpr, text, saw
+
+
+def hold(info, eye, up, timeout=30.0):
+    import termios, tty
+    if not (sys.stdin.isatty() and sys.stdout.isatty()): return
+    fd = sys.stdin.fileno(); old = termios.tcgetattr(fd); o = sys.stdout
+    tty.setcbreak(fd)
+    signal.signal(signal.SIGWINCH, _on_winch)                   # MINT m2
+    phrase = os.environ.get('ZARYA_PHRASE_LINE', '')
+    o.write('\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[6n'); o.flush()
+    top = None; typed = ''; got_key = False
+    base = dict(info); hint_row = 4
+    t0 = time.time(); fx = None; react_until = 0; reaction = None; clicks = []
+    glitch = 0.0; blink_t = 0.0; next_blink = 1.5; mouse = None
+    def frame(final=False):
+        nonlocal glitch
+        now = time.time()
+        st = dict(t=now - t0, eye=eye, glitch=glitch, blink=blink_t > 0)
+        inf = dict(base)
+        if fx and now - fx[1] < 0.9:
+            st.update(mode=fx[0], t=now - fx[1], level='crit' if fx[0] == 'alert' else 'info')
+        else:
+            st['mode'] = 'idle'
+            if mouse and top:
+                dx, dy = (mouse[0] - (OX + 8)) / 2.0, mouse[1] - (top + 4)
+                L = (dx * dx + dy * dy) ** 0.5 or 1; k = min(1, L / 12)
+                st['pupil'] = (dx / L * k, dy / L * k)
+        if reaction and now < react_until:
+            ru, en = reaction
+            inf[2] = BONE + ru + R
+            inf[3] = DIM + (en if en else stats()) + R
+        if not final:
+            inf[hint_row] = '\x1b[38;2;110;103;135m' + 'CLICK ME · TYPE TO START' + R
+        return render(build(st), inf)
+    def paint(lines):
+        o.write('\x1b7' + f'\x1b[{up}A')
+        for l in lines: o.write('\r\x1b[2K' + l + '\n')
+        o.write('\x1b8'); o.flush()
+    def reprint():
+        # MINT m2: a resize reflows the screen and the saved cursor goes stale, so the pet would land on the
+        # wrong rows. Clear the visible screen and print the whole greeting again; 'up' is valid again after it.
+        nonlocal top
+        o.write('\x1b[H\x1b[2J\r\n')
+        for l in frame(): o.write('\r\x1b[2K' + l + '\r\n')
+        o.write('\r\x1b[2K' + phrase + '\r\n' + '\r\n' * (up - 6))
+        o.write('\x1b[6n'); o.flush(); top = None
+    try:
+        while time.time() - t0 < timeout:
+            if _resized[0]:
+                _resized[0] = False; reprint()
+            try:
+                r, _, _ = select.select([fd], [], [], 0.08)
+            except InterruptedError:
+                continue
+            if r:
+                data = os.read(fd, 1024).decode(errors='ignore')
+                time.sleep(0.03)
+                while select.select([fd], [], [], 0)[0]:              # drain a paste / fast typing
+                    data += os.read(fd, 1024).decode(errors='ignore')
+                mice, cpr, text, saw = parse_input(data)
+                if cpr and top is None: top = cpr[-1][0] - up
+                now = time.time()
+                for b, cx, cy, kind in mice:
+                    mouse = (cx, cy)
+                    if kind == 'M' and b in (0, 1, 2) and top and top <= cy < top + 5 and cx <= W + 2:
+                        clicks = [c for c in clicks if now - c < 4] + [now]
+                        if len(clicks) >= 5:
+                            fx = ('alert', now); glitch = 1.0; reaction = ('ПРЕКРАТИ', 'STOP IT.'); clicks = []
+                        else:
+                            fx = ('poke', now); glitch = 0.4
+                            reaction = random.choice([x for x in REACTIONS if x != reaction])
+                        react_until = now + 2.6
+                if saw:
+                    typed = text; got_key = True; break
+            blink_t = max(0.0, blink_t - 0.08); next_blink -= 0.08
+            if next_blink <= 0: blink_t = 0.15; next_blink = 2.5 + random.random() * 5
+            glitch = glitch * 0.8 if glitch > 0.03 else 0.0
+            paint(frame())
+    except KeyboardInterrupt:
+        got_key = True
+    finally:
+        try: paint(frame(final=True))
+        except Exception: pass
+        o.write('\x1b[?1003l\x1b[?1006l\x1b[?25h'); o.flush()
+        if typed:                               # MINT m1: echo stays ON (readline only draws the line when echo is on);
+            # only ECHOCTL goes off, so the terminal's ESC[0n reply is echoed raw and swallowed by the terminal
+            quiet = list(old); quiet[3] &= ~termios.ECHOCTL
+            termios.tcsetattr(fd, termios.TCSADRAIN, quiet)
+        else:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        if typed:
+            d = os.path.expanduser('~/.cache/zarya-daemon'); os.makedirs(d, exist_ok=True)
+            with open(d + '/greet-keys', 'w') as f: f.write(typed)
+            o.write('\x1b[5n'); o.flush()        # terminal answers ESC[0n -> bash hands the keys to readline
+
+
+def main():
+    argv = sys.argv[1:]
+    if argv[:1] == ['--live']: return live()
+    if argv[:1] == ['--react']:
+        a = argv[1:] + ['', '', '']
+        return react(a[0], a[1], a[2])
+    lines = []
+    if '--' in argv:
+        i = argv.index('--'); lines = argv[i + 1:]; argv = argv[:i]
+    eye = hexeye(argv[argv.index('-e') + 1]) if '-e' in argv and argv.index('-e') + 1 < len(argv) else None
+    if lines:
+        info = {i + 1: l for i, l in enumerate(lines[:3])}
+    elif '-q' in argv:
+        info = {}
+    else:
+        home, cwd = os.path.expanduser('~'), os.getcwd()
+        if cwd.startswith(home): cwd = '~' + cwd[len(home):]
+        info = {1: f'{BONE}ДЕМОН{R}{DIM} · BLACKWALL DAEMON{R}',
+                2: f'{DIM}ЗАРЯ ⇢ SLMAEVE · KERNEL {platform.release()}{R}', 3: f'{DIM}{cwd}{R}'}
+    if '--hold' in argv:                       # repaint the pet already printed N lines above, until a key
+        i = argv.index('--hold')
+        up = int(argv[i + 1]) if i + 1 < len(argv) and argv[i + 1].isdigit() else 7
+        return hold(info, eye, up, float(os.environ.get('ZARYA_HOLD_SECS', '30')))
+    if '-a' in argv: return entrance(info, eye)
+    for l in render(build(dict(mode='idle', t=0.0, eye=eye)), info): print(l)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA v29 (Mint guest d1) :: hand a report to the desktop ДЕМОН.  zarya-say [-l info|ok|warn|crit] [-a zd|backup|top|disk|portal] TITLE [BODY] [HINT]
+lvl=info; act=""
+while getopts "l:a:" o; do case $o in l) lvl=$OPTARG;; a) act=$OPTARG;; *) exit 1;; esac; done
+shift $((OPTIND-1)); [ -n "$1" ] || { echo "usage: zarya-say [-l level] [-a action] TITLE [BODY] [HINT]"; exit 1; }
+D="$HOME/.cache/zarya-daemon/events"; mkdir -p "$D"
+f="$D/$(date +%s%N)-$$.json"
+python3 - "$lvl" "$act" "$1" "${2:-}" "${3:-}" > "$f.tmp" <<'PY'
+import json,sys
+l,a,t,b,h=sys.argv[1:6]
+print(json.dumps({"level":l,"action":a or None,"title":t,"body":b,"hint":h},ensure_ascii=False))
+PY
+mv "$f.tmp" "$f"

@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA ⇢ SLMAEVE :: ДЕМОН on the desktop. Mint guest version d1 of Zarya's desktop pet (zarya-daemon@zarya, v29).
+import os as _zos
+# v35: the code lives in ~/.local/lib/zarya/desk/ (parts run in order, one namespace, behaviour unchanged).
+# Map of the parts: ~/.local/lib/zarya/INDEX.md · history: ~/shum/demon/CHANGELOG.md
+_zP = _zos.path.join(_zos.path.expanduser('~'), '.local', 'lib', 'zarya', 'desk')
+for _zf in sorted(_n for _n in _zos.listdir(_zP) if _n.endswith('.py')):
+    with open(_zos.path.join(_zP, _zf), encoding='utf-8') as _zh:
+        exec(compile(_zh.read(), _zos.path.join(_zP, _zf), 'exec'), globals())

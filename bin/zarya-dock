@@ -1,0 +1,452 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA ⇢ SLMAEVE :: ДЕМОН dock (Mint guest, k7 (mint-pack v47): ПОДМЕНЫШ is the face: its own dock body (ДЕМОН's silhouette worn by it,
+# red edge, red eyes) whole inside the strip with a margin, no laptop, its palette; also when ДЕМОН is not running and resident=1. k6: while ПОДМЕНЫШ is in the desktop ДЕМОН it is in the dock too: closes the
+# laptop, stares at your prompt, «НЕ ОН ✕rc» on failures, waits on your commands; k5: holds still while you select text (GNOME Terminal drops a selection
+# when output lands during the drag, or on rows inside it); the desktop ДЕМОН d6 writes select-hold. k4: ♪ line shows the desktop ДЕМОН's music mode; k3: fixed the random crash on indented code lines; k2: no hands, lines clipped + autowrap off). k1: A fixed strip at the bottom of the terminal where ДЕМОН sits
+# with a little laptop and keeps typing. The shell scrolls above it (scroll region 1..rows-6), so scrollback works.
+#   at the prompt   types code on the laptop, glances at you, blinks; sleeps after 10 min (lid closes)
+#   command running visor scans, laptop shows a progress sweep and the command + elapsed time
+#   command failed  Blackwall glitch burst, laptop screen corrupts red, СБОЙ ✕code until the next success
+#   long job done   poke + green check on the screen
+# Pauses (draws nothing) while a full-screen / raw-mode program owns the terminal (vim, less, htop, ssh, pet…)
+# and while apt / dpkg draw their own progress bar. Started by the ZARYA terminal bashrc block; `dock off` stops it.
+#   zarya-dock --tty /dev/pts/N --shell PID [--rows 6]
+import os, sys, time, re, glob, random, json, struct, fcntl, termios, signal, importlib.util
+from importlib.machinery import SourceFileLoader
+
+HOME = os.path.expanduser('~')
+BIN = f'{HOME}/.local/bin'
+CACHE = f'{HOME}/.cache/zarya-daemon'
+HOLD = f'{CACHE}/select-hold'               # k5: 'until since' (epoch s), written by zarya-daemon-desk d6
+_loader = SourceFileLoader('zarya_daemon', f'{BIN}/zarya-daemon')
+_spec = importlib.util.spec_from_loader('zarya_daemon', _loader)
+ZD = importlib.util.module_from_spec(_spec); _loader.exec_module(ZD)
+try:                                                     # k6: ПОДМЕНЫШ's look comes from zarya-hurt (optional)
+    _hl = SourceFileLoader('zarya_hurt', f'{BIN}/zarya-hurt')
+    ZH = importlib.util.module_from_spec(importlib.util.spec_from_loader('zarya_hurt', _hl)); _hl.exec_module(ZH)
+    ZH.set_logger(lambda m: None)
+except Exception: ZH = None
+
+CW = 32                                     # canvas width in sprite pixels: ДЕМОН (x 2..17) + laptop (x 18..30)
+Y0, Y1 = ZD.OY, ZD.OY + 10                  # 10 pixel rows = 5 text rows
+PAUSE_CMDS = {'apt', 'apt-get', 'aptitude', 'dpkg', 'nala', 'mintupdate-cli', 'unattended-upgrade'}
+LAP = dict(frame='#9D7BFF', screen='#120E1F', base='#4A3F66', shadow='#2A2140', key='#6E5BB4')
+CODE = ['#8FD9A8', '#9D7BFF', '#F29AB4', '#E4E0EA', '#7B4DFF']
+DIM, BONE, GRN, PINK, HOT, VIO = (f'\x1b[38;2;{c}m' for c in ('150;143;166', '1;38;2;228;224;234', '143;217;168',
+                                                               '242;154;180', '255;92;138', '123;77;255'))
+BONE = '\x1b[1;38;2;228;224;234m'
+R = '\x1b[0m'
+
+
+def rd(p):
+    try:
+        with open(p) as f: return f.read()
+    except OSError: return ''
+
+
+def clip(s, n):
+    """Cut an ANSI-coloured string to n visible cells."""
+    if n <= 0: return ''
+    out, vis = [], 0
+    for tok in re.findall(r'\x1b\[[0-9;]*m|.', s, re.S):
+        if tok.startswith('\x1b'): out.append(tok); continue
+        if vis >= n - 1 and vis + 1 > n: break
+        if vis == n - 1 and len(s) > 0: out.append('…'); vis += 1; break
+        out.append(tok); vis += 1
+    return ''.join(out) + R
+
+
+def fmt(s):
+    s = int(s)
+    return f'{s // 60}:{s % 60:02d}' if s < 3600 else f'{s // 3600}h{s % 3600 // 60:02d}m'
+
+
+# >>> ZARYA dock k7
+CONF = f'{HOME}/.config/zarya/daemon.conf'
+CW7 = 18                                    # k7 canvas: 2 margin + 14 body + 2 margin
+CH7 = dict(edge='#FF2244', body='#14060C', lit='#2A0C16', visor='#07020A', eye='#FF2244', dead='#3A1A24', rule='#4A1420')
+
+
+def resident():
+    for line in rd(CONF).splitlines():
+        m = re.match(r'\s*resident\s*=\s*(\S*)', line)
+        if m: return m.group(1) != '0'
+    return True
+
+
+class Changeling7:
+    """k7: ПОДМЕНЫШ's dock body. Never tweens: holds, snaps, skips a row, cuts its eyes, decays when hungry."""
+    def __init__(self):
+        self.rng = random.Random(); self.until = 0.0; self.act = 'still'; self.legs = 0; self.row = 0; self.dx = 0
+
+    def _pick(self, now, busy):
+        r = self.rng.random()
+        if busy: self.act = 'twitch' if r < 0.35 else 'still'; hold = self.rng.uniform(0.25, 1.1)
+        elif r < 0.62: self.act = 'still'; hold = self.rng.uniform(0.8, 2.6)
+        elif r < 0.78: self.act = 'skip'; hold = self.rng.uniform(0.12, 0.3)
+        elif r < 0.88: self.act = 'ahead'; hold = self.rng.uniform(0.4, 0.9)
+        elif r < 0.95: self.act = 'cut'; hold = self.rng.uniform(0.1, 0.18)
+        else: self.act = 'rot'; hold = self.rng.uniform(0.15, 0.3)
+        self.row = self.rng.randrange(10); self.dx = self.rng.choice((-1, 1)); self.until = now + hold
+        if self.rng.random() < 0.3: self.legs ^= 1
+
+    def cells(self, now, busy, failing, ok, hunger):
+        """[x, y, '#hex'] on the 18 x 12 canvas."""
+        if now >= self.until: self._pick(now, busy)
+        rows = ZD.BODY + ZD.FRINGE[self.legs]
+        if ok: rows = ZD.HORNS_B + ZD.BODY[2:] + ZD.FRINGE[self.legs]
+        solid = {(x, y): ch for y, r in enumerate(rows) for x, ch in enumerate(r) if ch != '.'}
+        shift = {}
+        if failing: shift = {y: self.rng.choice((-1, 0, 0, 1)) for y in range(10)}
+        elif self.act == 'skip': shift = {self.row: self.dx}
+        elif self.act == 'twitch': shift = {y: 1 for y in range(self.row, min(10, self.row + 2))}
+        bx = 2 + (1 if self.act == 'ahead' or busy else 0); by = 1
+        out = []
+        for (x, y), ch in solid.items():
+            edge = any((x + dx, y + dy) not in solid for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)))
+            c = CH7['edge'] if edge else CH7['lit'] if ch == 'L' else CH7['visor'] if ch == 'D' else CH7['body']
+            if edge and (self.act == 'rot' and y == self.row or hunger is not None and hunger < 0.3 and (x * 7 + y * 3) % 11 == 0):
+                c = CH7['dead']                                        # decay: a few dead cells on its edge
+            out.append([bx + x + shift.get(y, 0), by + y, c])
+        if self.act != 'cut':                                          # eyes inside the visor (rows 4-5, cols 2..11)
+            if failing: eyes = [(n, r) for n in range(3, 9) for r in (4, 5)]
+            elif ok: eyes = [(n, r) for n in (5, 6) for r in (4, 5)]
+            elif busy: eyes = [(n, r) for n in (9, 10) for r in (4, 5)]   # on the running command
+            else: eyes = [(n, r) for n in (2, 3) for r in (4, 5)]      # back at your prompt
+            out += [[bx + n + shift.get(r, 0), by + r, CH7['eye']] for n, r in eyes]
+        return [c for c in out if 0 <= c[0] < CW7 and 0 <= c[1] < 12]
+
+
+def raster7(cells):
+    grid = [[None] * CW7 for _ in range(12)]
+    for x, y, c in cells: grid[y][x] = ZD.rgb(c)
+    return [''.join(ZD.cell(a, b) for a, b in zip(grid[i], grid[i + 1])) for i in range(0, 12, 2)]
+# <<< ZARYA dock k7
+
+
+class Dock:
+    def __init__(self, tty, shell, rows):
+        self.fd = os.open(tty, os.O_RDWR | os.O_NOCTTY)
+        self.shell = shell; self.N = rows
+        self.state_file = f'{CACHE}/dock-{shell}'
+        self.t0 = time.time(); self.size = (0, 0); self.last = [None] * rows; self.full_at = 0
+        self.blink = 0.0; self.next_blink = 2.0; self.glance_until = 0; self.glitch = 0.0
+        self.code = [[]]; self.next_px = 0
+        self.lid = 0.0                       # 0 closed .. 6 open (entrance: takes the laptop out)
+        self.err = None; self.ok_until = 0; self.err_until = 0; self.seen_state = ''
+        self.last_ok = ('', 0)
+        self.prompt_since = time.time(); self.paused = False
+        self.state_at = 0.0; self.held = False
+        self._cpu_prev = None; self._local = {}; self._local_at = 0
+        self.form = None; self.ch = None                  # k6
+        self.ch7 = Changeling7()                          # k7
+
+    # ---------- terminal ----------
+    def winsize(self):
+        r, c, _, _ = struct.unpack('HHHH', fcntl.ioctl(self.fd, termios.TIOCGWINSZ, b'\0' * 8))
+        return r, c
+
+    def fg_info(self):
+        """(busy, pause): busy = a command owns the terminal, pause = it is raw-mode / full-screen / apt."""
+        try:
+            pg = os.tcgetpgrp(self.fd)
+        except OSError:
+            return False, True
+        if pg == os.getpgid(self.shell):
+            return False, False
+        lflag = termios.tcgetattr(self.fd)[3]
+        if not lflag & termios.ICANON:
+            return True, True                # vim, less, htop, ssh, python REPL, pet, fzf…
+        names = set()
+        for p in glob.glob('/proc/[0-9]*/stat'):
+            try:
+                st = rd(p); i = st.rfind(')'); f = st[i + 2:].split()
+                if int(f[2]) == pg: names.add(st[st.find('(') + 1:i])
+            except (ValueError, IndexError): pass
+        return True, bool(names & PAUSE_CMDS)
+
+    def write(self, data):
+        try: os.write(self.fd, data.encode())
+        except OSError: sys.exit(0)
+
+    # ---------- data ----------
+    def stats(self):
+        j = {}
+        try:
+            j = json.loads(rd(f'{CACHE}/stats.json') or '{}')
+            if time.time() - j.get('ts', 0) > 10: j = {}
+        except ValueError: j = {}
+        if not j and time.time() - self._local_at > 2:            # desktop ДЕМОН not running: CPU + RAM only
+            self._local_at = time.time(); f = rd('/proc/stat').split('\n', 1)[0].split()[1:]
+            if f:
+                v = list(map(int, f)); idle = v[3] + v[4]; tot = sum(v)
+                if self._cpu_prev and tot > self._cpu_prev[0]:
+                    self._local['cpu'] = round(100 * (1 - (idle - self._cpu_prev[1]) / (tot - self._cpu_prev[0])))
+                self._cpu_prev = (tot, idle)
+            mi = dict(re.findall(r'^(\w+):\s+(\d+)', rd('/proc/meminfo'), re.M))
+            if 'MemTotal' in mi:
+                self._local['ram'] = (int(mi['MemTotal']) - int(mi['MemAvailable'])) / 1048576
+                self._local['ram_tot'] = int(mi['MemTotal']) / 1048576
+        return j or self._local
+
+    def shell_state(self):
+        """dock-<pid>: 'run<TAB>start<TAB>cmd' or 'done<TAB>rc<TAB>dur<TAB>cmd' written by the bashrc hooks."""
+        s = rd(self.state_file).rstrip('\n')
+        if s and s != self.seen_state:
+            self.seen_state = s; self.state_at = time.time()   # k5: a command started / ended here
+            p = s.split('\t')
+            if p[0] == 'done' and len(p) >= 4:
+                rc, dur, cmd = p[1], float(p[2] or 0), p[3]
+                if rc not in ('0', '130'):
+                    self.err = (rc, cmd); self.err_until = time.time() + 1.4; self.glitch = 1.0
+                else:
+                    self.err = None
+                    if dur >= 10: self.ok_until = time.time() + 1.6; self.last_ok = (cmd, dur)
+                self.prompt_since = time.time()
+        p = s.split('\t') if s else ['']
+        return p
+
+    def hold(self):
+        """k5: True while text is being selected (mouse held, or a terminal took the selection < 45 s ago).
+        A command run in this terminal after the selection started ends the hold."""
+        try:
+            until, since = map(float, rd(HOLD).split()[:2])
+        except ValueError:
+            return False
+        return time.time() < until and self.state_at <= since
+
+    # ---------- k7: who is the face ----------
+    def face(self):
+        """ПОДМЕНЫШ (dict) or None for ДЕМОН. Desktop ДЕМОН running: what it says. Not running: resident=1 → ПОДМЕНЫШ."""
+        try:
+            j = json.loads(rd(f'{CACHE}/stats.json') or '{}')
+            fresh = time.time() - j.get('ts', 0) <= 10
+        except ValueError: j, fresh = {}, False
+        if fresh:
+            c = j.get('changeling')
+            return c if isinstance(c, dict) and c.get('on') else None
+        return dict(on=True, hunger=None, name='ПОДМЕНЫШ') if resident() else None
+
+    # ---------- sprite ----------
+    def frame(self, busy, run_cmd):
+        now = time.time(); t = now - self.t0
+        self.blink = max(0.0, self.blink - 0.15); self.next_blink -= 0.15
+        if self.next_blink <= 0: self.blink = 0.15; self.next_blink = 2.5 + random.random() * 5
+        self.glitch = self.glitch * 0.82 if self.glitch > 0.03 else 0.0
+        if random.random() < 0.003: self.glitch = 0.5
+        asleep = not busy and now - self.prompt_since > 600 and not self.err
+        ch = self.ch                                                       # k6: ПОДМЕНЫШ closes the laptop
+        target = 0 if asleep or ch else 6
+        self.lid += max(-1, min(1, target - self.lid)) * (0.6 if target > self.lid else 0.8)
+        st = dict(t=t, glitch=self.glitch, blink=self.blink > 0)
+        failing = now < self.err_until
+        if failing: st.update(mode='alert', t=now - self.err_until + 1.4, level='crit')
+        elif now < self.ok_until: st.update(mode='poke', t=1.6 - (self.ok_until - now))
+        elif busy: st['mode'] = 'work'
+        elif asleep: st['mode'] = 'sleep'
+        else:
+            st['mode'] = 'idle'
+            if now < self.glance_until: st['pupil'] = (0.0, 0.0)
+            else: st['pupil'] = (0.95, 0.45)                     # eyes on the laptop
+            if random.random() < 0.004: self.glance_until = now + 1.2
+        rects = ZD.build(st)
+        if ch and ZH and hasattr(ZH, 'Form'):                             # k6: its body, its eyes on your prompt
+            try:
+                if self.form is None:
+                    class _M: d = dict(form=None); save = staticmethod(lambda: None)
+                    self.form = ZH.Form(_M())
+                self.form.mem.d['form'] = dict(hunger=ch.get('hunger', 0.5), until=0)
+                look = (4, 3) if busy else (-30, -12)                          # at the running command / up at the prompt
+                if failing: look = (0, 0)
+                body, _ = self.form.frame(ZD.build(dict(st, mode='idle')), None, now, mouse=look, music=False)
+                self.form.line = None
+                occ = {(int(x), int(y)) for x, y, w, h, c, a in body if a >= 0.5}      # its red outline, one cell around it
+                rim = [[x + dx, y + dy, 1, 1, '#FF2244', 1.0] for (x, y) in occ for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))
+                       if (x + dx, y + dy) not in occ]
+                rects = rim + [[x, y, w, h, '#14060C' if c.upper() in ('#07060D', '#000000') else c, a] for x, y, w, h, c, a in body]
+            except Exception: pass
+        # --- laptop ---
+        L = []
+        def px(x, y, c, a=1.0): L.append([x, y, 1, 1, c, a])
+        base_y = ZD.OY + 8
+        for x in range(18, 31): px(x, base_y, LAP['base'])
+        for x in range(19, 31): px(x, base_y + 1, LAP['shadow'])
+        for x in range(20, 30, 2): px(x, base_y, LAP['key'])
+        h = int(round(self.lid))
+        top = base_y - h
+        if h >= 1:
+            for y in range(top, base_y):
+                px(21, y, LAP['frame']); px(30, y, LAP['frame'])
+            for x in range(21, 31): px(x, top, LAP['frame'])
+            for y in range(top + 1, base_y):
+                for x in range(22, 30): px(x, y, LAP['screen'])
+            rows = list(range(top + 1, base_y))
+            if failing or (self.err and not busy and int(t * 3) % 7 == 0):
+                for y in rows:
+                    for x in range(22, 30):
+                        if random.random() < (0.7 if failing else 0.25): px(x, y, random.choice(['#FF5C8A', '#FF2244', '#F29AB4']))
+            elif now < self.ok_until:
+                for (x, y) in [(23, 2), (24, 3), (25, 4), (26, 3), (27, 2), (28, 1)]:
+                    if top + y < base_y: px(x, top + y, '#8FD9A8')
+            elif busy:
+                sweep = 22 + int(t * 8) % 8
+                for y in rows:
+                    px(sweep, y, '#8FD9A8'); px(22 + (sweep - 22 + 7) % 8, y, '#8FD9A8', 0.35)
+            elif not asleep and rows:
+                self.type_code(now, len(rows))
+                for i, line in enumerate(self.code[-len(rows):]):
+                    for j, c in enumerate(line[:8]):
+                        if c and c.startswith('#'): px(22 + j, rows[i], c)
+                if int(t * 2) % 2 and rows: px(22 + min(7, len(self.code[-1])), rows[min(len(rows), len(self.code)) - 1], '#E4E0EA', 0.9)
+        return rects + L                     # k2: no hands, he just works the laptop
+
+    def type_code(self, now, nrows):
+        if now < self.next_px: return
+        self.next_px = now + random.choice([0.08, 0.1, 0.14, 0.2, 0.45])
+        line = self.code[-1]
+        if len(line) >= random.choice([4, 5, 6, 7, 8]) or len(line) >= 8:
+            self.code.append([]); self.code = self.code[-12:]
+            if random.random() < 0.15: self.code[-1].append('indent')  # blank indent (drawn as nothing)
+            return
+        line.append(random.choice(CODE) if line or random.random() > 0.2 else '#7B4DFF')
+
+    def raster(self, rects):
+        grid = [[None] * CW for _ in range(Y1 - Y0)]
+        for x, y, w, h, c, a in rects:
+            if a < 0.25: continue
+            col = ZD.rgb(c)
+            for yy in range(int(y), int(y + h)):
+                for xx in range(int(x), int(x + w)):
+                    if Y0 <= yy < Y1 and 0 <= xx < CW:
+                        base = grid[yy - Y0][xx] or ZD.VOID
+                        grid[yy - Y0][xx] = col if a >= 0.95 else tuple(round(col[i] * a + base[i] * (1 - a)) for i in range(3))
+        lines = []
+        for i in range(0, len(grid), 2):
+            lines.append(''.join(ZD.cell(a, b) for a, b in zip(grid[i], grid[i + 1])))
+        return lines
+
+    # ---------- info column ----------
+    def info(self, busy, p, cols):
+        now = time.time(); s = self.stats()
+        if self.ch:                                                        # k6
+            return self.info_changeling(busy, p, s, now)
+        out = [f'{BONE}ЗАРЯ ⇢ SLMAEVE{R}{DIM} · {time.strftime("%H:%M")}{R}']
+        if busy and p[0] == 'run' and len(p) >= 3:
+            try: el = now - float(p[1])
+            except ValueError: el = 0
+            out.append(f'{GRN}РАБОТАЕТ{R}{DIM} · {p[2][:26]} · {fmt(el)}{R}')
+        elif busy:
+            out.append(f'{GRN}РАБОТАЕТ{R}')
+        elif now < self.err_until or self.err:
+            rc, cmd = self.err
+            out.append(f'{HOT}СБОЙ ✕{rc}{R}{DIM} · {cmd[:28]}{R}')
+        elif now < self.ok_until:
+            cmd, dur = self.last_ok
+            out.append(f'{GRN}ГОТОВО{R}{DIM} · {cmd[:26]} · {fmt(dur)}{R}')
+        elif now - self.prompt_since > 600:
+            out.append(f'{DIM}СОН · zzz{R}')
+        else:
+            out.append(f'{VIO}ПИШЕТ КОД{R}{DIM} · typing…{R}')
+        parts = []
+        if s.get('cpu') is not None: parts.append(f'CPU {GRN}{s["cpu"]}%{DIM}' + (f' {s["cpu_t"]}°' if s.get('cpu_t') else ''))
+        if s.get('gpu') is not None: parts.append(f'GPU {GRN}{s["gpu"]}%{DIM} {s.get("gpu_t", "?")}°')
+        if s.get('ram') is not None: parts.append(f'RAM {GRN}{s["ram"]:.1f}{DIM}/{s["ram_tot"]:.1f}')
+        out.append(DIM + ' · '.join(parts) + R if parts else '')
+        m = s.get('music') or {}
+        out.append(f'{VIO}♪{R} ' + (f'{VIO}{m["mode"]}{R}{DIM} · ' if m.get('mode') else DIM) + f'{m["title"]} · {m.get("artist", "")}{R}' if m.get('playing') else '')   # k4: music mode
+        return out
+
+    def info_changeling(self, busy, p, s, now):
+        g = getattr(ZH, 'GLYPHS', 'ЖЯЮЩ') if ZH else 'ЖЯЮЩ'
+        hdr = ''.join(random.choice(g) if c.strip() and random.random() < 0.12 else c for c in 'НЕ ОН ⇢ SLMAEVE')
+        out = [f'{HOT}{hdr}{R}{DIM} · {time.strftime("%H:%M")}{R}']
+        if busy and p[0] == 'run' and len(p) >= 3:
+            try: el = now - float(p[1])
+            except ValueError: el = 0
+            out.append(f'{HOT}ЖДЁТ{R}{DIM} · {p[2][:26]} · {fmt(el)}{R}')
+        elif busy: out.append(f'{HOT}ЖДЁТ{R}')
+        elif now < self.err_until or self.err:
+            rc, cmd = self.err; out.append(f'{HOT}НЕ ОН ✕{rc}{R}{DIM} · {cmd[:28]}{R}')
+        elif now < self.ok_until: out.append(f'{HOT}ЕЩЁ.{R}{DIM} · {self.last_ok[0][:26]}{R}')
+        else: out.append(f'{HOT}СМОТРИТ{R}{DIM} · on what you type{R}')
+        parts = []
+        if s.get('cpu') is not None: parts.append(f'CPU {s["cpu"]}%')
+        if s.get('gpu') is not None: parts.append(f'GPU {s["gpu"]}%')
+        if s.get('ram') is not None: parts.append(f'RAM {s["ram"]:.1f}/{s["ram_tot"]:.1f}')
+        out.append(DIM + ' · '.join(parts) + R if parts else '')
+        m = s.get('music') or {}
+        if self.ch.get('hunger') is None:                                  # k7: desktop ДЕМОН not running
+            out.append(f'{HOT}{self.ch.get("name", "ПОДМЕНЫШ")}{R}{DIM} · ЖИВЁТ ЗДЕСЬ · desktop ДЕМОН off{R}'); return out
+        h = float(self.ch.get('hunger', 0.5) or 0); n = int(round(h * 5))
+        out.append(f'{HOT}{self.ch.get("name", "ПОДМЕНЫШ")}{R}{DIM} · ГОЛОД {"▮" * n}{"▯" * (5 - n)}' + (f' · {m["title"]}' if m.get('playing') else '') + R)
+        return out
+
+    # ---------- main loop ----------
+    def run(self):
+        signal.signal(signal.SIGHUP, lambda *a: sys.exit(0))
+        for sg in (signal.SIGINT, signal.SIGQUIT, signal.SIGTSTP, signal.SIGTTOU, signal.SIGTTIN):
+            signal.signal(sg, signal.SIG_IGN)            # shares the shell's process group: Ctrl+C at the prompt must not kill it
+        while True:
+            try: os.kill(self.shell, 0)
+            except OSError: break
+            rows, cols = self.winsize()
+            busy, pause = self.fg_info()
+            p = self.shell_state()
+            if pause:
+                if not self.paused: self.paused = True
+                time.sleep(0.3); continue
+            if self.paused: self.paused = False; self.last = [None] * self.N
+            if rows < self.N + 6 or cols < 40:
+                time.sleep(0.5); continue
+            if self.hold():                                      # k5: write nothing at all while you select
+                self.held = True; time.sleep(0.1); continue
+            if self.held: self.held = False; self.full_at = time.time() + 2   # resume without a full repaint (keeps the selection)
+            if (rows, cols) != self.size:
+                self.size = (rows, cols); self.last = [None] * self.N
+            if time.time() > self.full_at: self.last = [None] * self.N; self.full_at = time.time() + 2   # survive `clear`
+            try:
+                c = self.face()                                                  # k7 (k6: only while it was in the desktop ДЕМОН)
+                if bool(c) != bool(self.ch): self.last = [None] * self.N
+                self.ch = c
+                if self.ch:
+                    now_ = time.time(); h_ = self.ch.get('hunger')
+                    sprite = raster7(self.ch7.cells(now_, busy, now_ < self.err_until, now_ < self.ok_until, h_))
+                else: sprite = self.raster(self.frame(busy, p))
+                info = self.info(busy, p, cols)
+            except Exception as e:                               # k3: never die on a bad frame, log it and go on
+                import traceback
+                with open(f'{HOME}/.cache/zarya-dock.log', 'a') as f:
+                    f.write(time.strftime('%F %T ') + f'frame error: {e}\n' + traceback.format_exc(limit=3))
+                self.code = [[]]; time.sleep(0.5); continue
+            rule = f'\x1b[38;2;58;52;80m{"╌" * cols}{R}'
+            room = cols - CW - 3                                 # k2: info never wider than the terminal
+            if self.ch:                                          # k7: 6 sprite rows; the rule runs on to the right of its horns
+                room = cols - CW7 - 3
+                body = [sprite[0] + f'\x1b[38;2;74;20;32m{"╌" * (cols - CW7)}{R}'] + \
+                       [sprite[i + 1] + '  ' + clip(info[i] if i < len(info) else '', room) for i in range(5)]
+            else: body = [rule] + [sprite[i] + '  ' + clip(info[i] if i < len(info) else '', room) for i in range(5)]
+            # autowrap off while drawing: a line that touches the last column must not spill into the next row
+            out = ['\x1b7\x1b[?7l', f'\x1b[1;{rows - self.N}r']   # keep the scroll region (TUIs and resets drop it)
+            for i, line in enumerate(body):
+                if line != self.last[i]:
+                    out.append(f'\x1b[{rows - self.N + 1 + i};1H{line}{R}\x1b[K')
+                    self.last[i] = line
+            out.append('\x1b[?7h\x1b8')
+            self.write(''.join(out))
+            time.sleep(0.15)
+        try: os.remove(self.state_file)
+        except OSError: pass
+
+
+def main():
+    a = sys.argv[1:]
+    def opt(k, d=None): return a[a.index(k) + 1] if k in a and a.index(k) + 1 < len(a) else d
+    tty, shell = opt('--tty'), opt('--shell')
+    if not tty or not shell: print(__doc__ or 'usage: zarya-dock --tty /dev/pts/N --shell PID'); return
+    Dock(tty, int(shell), int(opt('--rows', '6'))).run()
+
+
+if __name__ == '__main__':
+    try: main()
+    except KeyboardInterrupt: pass

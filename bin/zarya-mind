@@ -1,0 +1,600 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA ⇢ SLMAEVE :: zarya-mind m4 (mint-pack v53: the ears also answer "deli": is this ДЕЛИКАТЕС by sound (Death Grips-grade
+#   voice-as-drum + abrasive electronics + hard cuts, heavy dubstep, German hard techno; not plain metal, not plain EDM);
+#   m3 readings get heard once more for it). m3 (mint-pack v52: EARS: Gemini hears the song: the song brain cuts up to 8 × 10 s clips
+#   (one per section) after a full play; one call per song sends the clips + the lyrics; section feel, dark core and a line
+#   about the sound come from both; songs without lyrics get read too; the clip is deleted after. ears=0 in mind.conf: off).
+#   m2 (mint-pack v50: 503 busy → fallback model + 2-min wait; lyrics sampled across the whole song;
+#   "about" = what the words say, no sound guessing, no filler; `reread` redoes the m1 readings). m1 mint-pack v49. ДЕМОН's reading of songs, free only.
+#   Backend m1: Gemini free tier (key ~/.config/zarya/gemini.key, billing never linked = $0). Later: local, claude, off.
+#   What it does: for each song ДЕМОН has lyrics for, one call: what the song is about (two sentences, no lyric quotes),
+#   up to 3 mood words, mood per lyric section, "cute surface / dark core". Once per song, cached forever.
+#   Once a week: a short read of the week's listening (ДНЕВНИК shows both).
+#   Never in games (ДЕМОН's bus says `game: …`, or Steam's game launcher runs) · daily cap · gap between calls ·
+#   backs off on HTTP 429 (Retry-After / retryDelay, else 10 min doubling to 6 h) · tries the fallback model on 404.
+#   Sends only: artist, title, the lyric lines (with their times), m3: ≤ 80 s of clips of the song, and for the week the
+#   play counts. Nothing else.
+#   The key is never printed or logged. Log: ~/.cache/zarya-mind.log
+#
+#   zarya-mind status            backend, model, calls today / cap, backoff, cache size, game now
+#   zarya-mind test              one tiny call: is the key + model working?
+#   zarya-mind now               read the song playing now (if not cached)
+#   zarya-mind song "ARTIST - TITLE" [--force]
+#   zarya-mind show TEXT         print the cached reading of matching songs
+#   zarya-mind backfill [N]      read up to N of your most played songs that have lyrics (default 10, within the cap)
+#   zarya-mind reread            read again every song an older version read (m1), within the cap
+#   zarya-mind ears              m3: clips waiting to be heard, songs heard so far
+#   zarya-mind week [--force]    this week's read (Mon-Sun, Lima time)
+#   zarya-mind run               the service loop (zarya-mind.service)
+#   ~/.config/zarya/mind.conf    mind=gemini|off · model · fallback · daily_cap · gap · backfill_per_hour · week_day · ears=1|0
+import os, sys, json, time, re, glob, hashlib, random, urllib.request, urllib.error
+sys.dont_write_bytecode = True
+
+VERSION = 'm4'
+HOME = os.path.expanduser('~')
+CONF = f'{HOME}/.config/zarya/mind.conf'
+KEYF = f'{HOME}/.config/zarya/gemini.key'
+DIR = f'{HOME}/.local/share/zarya/mind'
+SONGS_C = f'{HOME}/.cache/zarya-daemon/songs'
+MUSIC = f'{HOME}/.cache/zarya-daemon/music.json'
+BUS = f'{HOME}/.cache/zarya/bus-%s.jsonl'
+LISTEN = f'{HOME}/.local/share/zarya/listening'
+LOG = f'{HOME}/.cache/zarya-mind.log'
+EARS = f'{HOME}/.cache/zarya-brain/ears'                 # m3: clips the song brain cut
+EARS_DONE = f'{DIR}/ears-done'                           # one empty file per song heard (or given up on)
+API = os.environ.get('ZARYA_GEMINI_API', 'https://generativelanguage.googleapis.com')
+DEFAULTS = dict(mind='gemini', model='gemini-3.5-flash-lite', fallback='gemini-3.1-flash-lite', daily_cap='60', gap='20',
+                backfill_per_hour='6', week_day='sun', min_heard='30', ears='1')
+MOODS = ('calm', 'sad', 'tender', 'sweet', 'hype', 'angry', 'dark', 'hollow', 'playful', 'epic', 'anxious', 'defiant')
+
+
+def log(msg):
+    try:
+        os.makedirs(os.path.dirname(LOG), exist_ok=True)
+        with open(LOG, 'a', encoding='utf-8') as f: f.write(time.strftime('%F %T ') + msg + '\n')
+    except OSError: pass
+
+
+def rd(p):
+    try:
+        with open(p, encoding='utf-8') as f: return f.read()
+    except OSError: return ''
+
+
+def conf():
+    c = dict(DEFAULTS)
+    for ln in rd(CONF).splitlines():
+        m = re.match(r'\s*([a-z_]+)\s*=\s*(.*?)\s*(#.*)?$', ln)
+        if m: c[m.group(1)] = m.group(2)
+    return c
+
+
+def write_json(p, obj):
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p + '.tmp', 'w', encoding='utf-8') as f: json.dump(obj, f, ensure_ascii=False, indent=1)
+    os.replace(p + '.tmp', p)
+
+
+def load_json(p, d=None):
+    try: return json.loads(rd(p) or 'null') or d
+    except ValueError: return d
+
+
+# ---------------------------------------------------------------- song keys (same as zarya-journal key_of)
+def norm(s): return re.sub(r'\s+', ' ', re.sub(r'[^\w\s]', '', (s or '').casefold())).strip()
+
+
+def key_of(artist, title):
+    t = re.sub(r'\s*[\(\[].*?[\)\]]', '', title or ''); t = re.split(r'\s-\s', t)[0]
+    return norm(artist) + '|' + norm(t)
+
+
+def song_path(key): return f'{DIR}/songs/{hashlib.md5(key.encode()).hexdigest()}.json'
+
+
+_IDX = {'at': 0, 'map': {}}
+def lyric_index():
+    """journal key → ДЕМОН's song cache file (artist, title, synced lyrics). Rebuilt every 10 min."""
+    if time.time() - _IDX['at'] < 600 and _IDX['map']: return _IDX['map']
+    m = {}
+    for p in glob.glob(f'{SONGS_C}/*.json'):
+        j = load_json(p, {}) or {}
+        if j.get('lyrics'): m[key_of(j.get('artist', ''), j.get('title', ''))] = p
+    _IDX.update(at=time.time(), map=m); return m
+
+
+# ---------------------------------------------------------------- budget, backoff, games
+def state():
+    return load_json(f'{DIR}/state.json', {}) or {}
+
+
+def save_state(st): write_json(f'{DIR}/state.json', st)
+
+
+def calls_today(st):
+    return st.get('calls', {}).get(time.strftime('%F'), 0)
+
+
+def can_call(c, st, now=None):
+    now = now or time.time()
+    if c.get('mind', 'gemini') != 'gemini': return False, 'mind is not gemini'
+    if not rd(KEYF).strip(): return False, 'no key in ~/.config/zarya/gemini.key'
+    if now < st.get('backoff_until', 0): return False, f'backing off until {time.strftime("%H:%M", time.localtime(st["backoff_until"]))}'
+    if calls_today(st) >= int(c.get('daily_cap') or 60): return False, f'daily cap {c.get("daily_cap")} reached'
+    if now - st.get('last_call', 0) < float(c.get('gap') or 20): return False, 'gap'
+    return True, ''
+
+
+def in_game():
+    """ДЕМОН's own call (the last `game:` line on today's bus), else Steam's game launcher (reaper SteamLaunch)."""
+    last = None
+    for p in (BUS % time.strftime('%Y%m%d'),):
+        try:
+            with open(p, 'rb') as f:
+                f.seek(0, 2); n = f.tell(); f.seek(max(0, n - 400_000)); tail = f.read().decode('utf-8', 'replace')
+            for ln in tail.splitlines():
+                if '"game: ' in ln or "'game: " in ln: last = ln
+        except OSError: pass
+    if last:
+        if 'he stays' in last or 'drawn on top' in last: return True
+        if 'over' in last or 'layer off' in last: return False
+    for c in glob.glob('/proc/[0-9]*/cmdline'):
+        try:
+            s = open(c, 'rb').read()
+            if b'SteamLaunch' in s and b'AppId=' in s: return True
+        except OSError: pass
+    return False
+
+
+# ---------------------------------------------------------------- Gemini
+class Backoff(Exception): pass
+class AudioRefused(RuntimeError): pass
+
+
+def gemini(c, prompt, max_tokens=700, json_out=True, audio=None):
+    """One generateContent call. Returns the text. Raises Backoff on 429, RuntimeError on anything else.
+    m3: audio = (mime, base64 data) adds the clip as an inline part (before the text)."""
+    key = rd(KEYF).strip()
+    st = state(); st['last_call'] = time.time(); st.setdefault('calls', {})
+    day = time.strftime('%F'); st['calls'] = {day: st['calls'].get(day, 0) + 1}; save_state(st)
+    models = [c.get('model') or DEFAULTS['model']] + ([c['fallback']] if c.get('fallback') else [])
+    gc = dict(temperature=0.3, maxOutputTokens=max_tokens)
+    if json_out: gc['responseMimeType'] = 'application/json'
+    last_err = None; busy = False
+    for model in models:
+        for cfg in ((gc,) if not json_out else (gc, dict(temperature=0.3, maxOutputTokens=max_tokens))):
+            parts = ([dict(inlineData=dict(mimeType=audio[0], data=audio[1]))] if audio else []) + [dict(text=prompt)]
+            body = json.dumps(dict(contents=[dict(role='user', parts=parts)], generationConfig=cfg)).encode()
+            req = urllib.request.Request(f'{API}/v1beta/models/{model}:generateContent', data=body, method='POST',
+                                         headers={'Content-Type': 'application/json', 'x-goog-api-key': key, 'User-Agent': 'zarya-mind/' + VERSION})
+            try:
+                with urllib.request.urlopen(req, timeout=90 if audio else 40) as r: j = json.loads(r.read().decode())
+            except urllib.error.HTTPError as e:
+                txt = e.read().decode('utf-8', 'replace')[:600]
+                if e.code == 429:
+                    wait = retry_after(e, txt); raise Backoff(f'{model}: 429, wait {int(wait)} s|{wait}')
+                if e.code == 404: last_err = f'{model}: 404 (model not found)'; log(f'gemini: {last_err}, trying the next model'); break
+                if e.code in (500, 502, 503, 504):                                     # m2: Google busy: next model, then a short wait
+                    busy = True; last_err = f'{model}: {e.code} (busy)'; log(f'gemini: {last_err}, trying the next model'); break
+                if e.code == 400 and cfg is gc and json_out: last_err = f'{model}: 400 with JSON mode'; continue
+                if e.code == 400 and audio: raise AudioRefused(f'{model}: 400 with audio: ' + ' '.join(txt.split())[:160])   # m3
+                if e.code in (401, 403): raise RuntimeError(f'{model}: {e.code} (key refused: check AI Studio)')
+                raise RuntimeError(f"{model}: HTTP {e.code}: " + " ".join(txt.split())[:200])
+            except (urllib.error.URLError, TimeoutError, OSError) as e:
+                raise RuntimeError(f'network: {getattr(e, "reason", e)}')
+            try:
+                parts = j['candidates'][0]['content']['parts']
+                text = ''.join(p.get('text', '') for p in parts if not p.get('thought'))
+            except (KeyError, IndexError, TypeError):
+                raise RuntimeError(f'{model}: empty answer ({json.dumps(j)[:160]})')
+            st = state(); st['model_used'] = model; st.pop('backoff_n', None); save_state(st)
+            return text
+    if busy: raise Backoff(f'{last_err}: every model busy, wait 120 s|120')
+    raise RuntimeError(last_err or 'no model answered')
+
+
+def retry_after(e, txt):
+    try:
+        ra = float(e.headers.get('Retry-After') or 0)
+        if ra > 0: return min(6 * 3600, ra)
+    except (TypeError, ValueError): pass
+    m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', txt)
+    if m: return min(6 * 3600, float(m.group(1)) + 5)
+    st = state(); n = st.get('backoff_n', 0) + 1; st['backoff_n'] = n; save_state(st)
+    return min(6 * 3600, 600 * 2 ** (n - 1))
+
+
+def backoff(msg):
+    why, wait = msg.rsplit('|', 1)
+    st = state(); st['backoff_until'] = time.time() + float(wait); save_state(st)
+    log(f'gemini: {why} (backing off)')
+
+
+def parse_json(text):
+    t = text.strip()
+    t = re.sub(r'^```(?:json)?\s*|\s*```$', '', t)
+    try: return json.loads(t)
+    except ValueError:
+        m = re.search(r'\{.*\}', t, re.S)
+        if m:
+            try: return json.loads(m.group(0))
+            except ValueError: pass
+    return None
+
+
+# ---------------------------------------------------------------- song reading
+SONG_PROMPT = '''You read songs for a desktop music companion. Answer with ONE JSON object and nothing else:
+{"about": "<at most 2 short sentences in plain English: what the song is about, its situation or feeling>",
+ "mood": ["<1 to 3 words from: %s>"],
+ "dark_core": <true if the sound or surface is cute / sweet / bright but the words are dark, else false>,
+ "sections": [{"at": <seconds where the section starts, from the line times>, "feel": "<one word from the same list>"}],
+ "language": "<main language of the lyrics, English name>"}
+Rules for "about": say what the WORDS say: the situation, who speaks to whom, what happens or is wanted. Be concrete.
+You only have the lyrics: never describe the sound, beat, production, genre or the artist's reputation.
+Never use these words: explore, exploration, journey, delve, tapestry, barrage, raw, visceral, anthem, vibe.
+If the lyrics look like several songs stitched together (a medley or megamix), say so and name the common thread.
+Other rules: never quote more than 4 words of the lyrics; no judgement of the artist; up to 8 sections, in order, spread
+over the whole song up to its last line time; if the lyrics are too short or unclear, keep "about" honest and short.
+
+Song: %s - %s
+Lyrics (seconds  line):
+%s'''
+
+
+EARS_PROMPT = '''You read songs for a desktop music companion. You get AUDIO: %d short excerpts of the song, one after another with
+a short silence between them; excerpt n is the part of the song listed below. %s
+Answer with ONE JSON object and nothing else:
+{"about": "<at most 2 short sentences in plain English: %s>",
+ "sound": "<one short sentence: what the music and the voice do (delivery, instruments, how it moves), no genre names>",
+ "mood": ["<1 to 3 words from: %s>"],
+ "dark_core": <true if the sound or surface is cute / sweet / bright (sugary voice, bright synths, playful) but the words or
+               the feeling underneath are dark, else false>,
+ "sections": [{"at": <song time in seconds where the excerpt's part starts, from the list>, "feel": "<one word from the same list>"}],
+ "deli": <true only if it SOUNDS like one of: (a) Death Grips-grade: a shouted / barked voice used like a drum over abrasive,
+          distorted electronic or noise production with abrupt cuts and stops; (b) heavy, filthy dubstep / riddim; (c) German
+          hard techno / industrial techno. false for metal, punk, nu metal, rock, plain EDM / festival drops, trap, phonk,
+          rap with a clean beat, and anything soft>,
+ "language": "<main language of the lyrics, English name, or none>"}
+"sections": one entry per excerpt, in order, "feel" judged by HEARING that excerpt (energy, voice, tension) together with
+the words sung there. A quiet, soft, slow or tender part is calm / sad / tender; a loud, fast, pushing part is hype / angry.
+Never use these words: explore, exploration, journey, delve, tapestry, barrage, raw, visceral, anthem, vibe.
+Never quote more than 4 words of the lyrics; no judgement of the artist.
+
+Song: %s - %s
+Excerpts (n: song time):
+%s
+%s'''
+
+
+def lyric_text(lyrics, limit=4000):
+    """m2: every line if it fits, else lines picked evenly across the whole song (first and last always in), so long songs
+    and megamixes are seen from start to end."""
+    rows = [f'{int(t):4d}  {ln}' for t, ln in lyrics]
+    if sum(len(r) + 1 for r in rows) <= limit: return '\n'.join(rows)
+    avg = sum(len(r) + 1 for r in rows) / len(rows); k = max(2, int(limit / avg))
+    idx = sorted({round(i * (len(rows) - 1) / (k - 1)) for i in range(k)})
+    return f'(long song: {len(rows)} lines, {len(idx)} shown, spread over the whole song)\n' + '\n'.join(rows[i] for i in idx)
+
+
+def clean_reading(j, lyrics, end=None):
+    if not isinstance(j, dict) or not isinstance(j.get('about'), str) or not j['about'].strip(): return None
+    about = re.sub(r'\s+', ' ', j['about']).strip()[:320]
+    mood = [m for m in (j.get('mood') or []) if isinstance(m, str) and m.lower() in MOODS][:3]
+    end = end if end is not None else max((t for t, _ in lyrics), default=0)
+    secs = []
+    for s in j.get('sections') or []:
+        try:
+            at = float(s.get('at')); feel = str(s.get('feel', '')).lower()
+            if 0 <= at <= end + 5 and feel in MOODS: secs.append(dict(at=round(at, 1), feel=feel))
+        except (TypeError, ValueError, AttributeError): pass
+    secs = sorted(secs, key=lambda s: s['at'])[:8]
+    out = dict(about=about, mood=[m.lower() for m in mood], dark_core=bool(j.get('dark_core')), sections=secs,
+               language=str(j.get('language') or '')[:30])
+    if isinstance(j.get('sound'), str) and j['sound'].strip(): out['sound'] = re.sub(r'\s+', ' ', j['sound']).strip()[:200]
+    if 'deli' in j: out['deli'] = j.get('deli') is True                       # m4: only the ears prompt asks for it
+    return out
+
+
+def read_song(c, key, force=False):
+    """Returns ('done' | 'cached' | 'no lyrics' | 'skip: why', reading or None)."""
+    p = song_path(key)
+    if not force and os.path.exists(p): return 'cached', load_json(p)
+    src = lyric_index().get(key)
+    if not src: return 'no lyrics', None
+    info = load_json(src, {}) or {}
+    lyrics = [(float(t), str(ln)) for t, ln in info.get('lyrics') or [] if str(ln).strip()]
+    if len(lyrics) < 4: return 'no lyrics', None
+    st = state(); ok, why = can_call(c, st)
+    if not ok: return f'skip: {why}', None
+    prompt = SONG_PROMPT % (', '.join(MOODS), info.get('artist', ''), info.get('title', ''), lyric_text(lyrics))
+    try: text = gemini(c, prompt)
+    except Backoff as e: backoff(str(e)); return 'skip: backoff', None
+    except RuntimeError as e: log(f'song: {info.get("title", "")[:50]}: {e}'); return f'skip: {e}', None
+    r = clean_reading(parse_json(text), lyrics)
+    if not r: log(f'song: {info.get("title", "")[:50]}: answer was not usable JSON'); return 'skip: bad answer', None
+    r.update(key=key, artist=info.get('artist', ''), title=info.get('title', ''), model=state().get('model_used', ''), ts=time.time(), v=VERSION)
+    write_json(p, r); log(f'song: read {r["artist"]} - {r["title"]}: {", ".join(r["mood"]) or "-"}{" · dark core" if r["dark_core"] else ""}')
+    return 'done', r
+
+
+# ---------------------------------------------------------------- m3 ears: Gemini hears the song
+def ears_pending():
+    """clips the song brain cut, oldest first: [(json path, meta)]."""
+    out = []
+    for p in sorted(glob.glob(f'{EARS}/*.json'), key=lambda q: os.path.getmtime(q)):
+        j = load_json(p, {}) or {}
+        if j.get('clips') and os.path.exists(p[:-5] + '.wav'): out.append((p, j))
+    return out
+
+
+def ears_done(meta, p, why):
+    os.makedirs(EARS_DONE, exist_ok=True)
+    with open(f'{EARS_DONE}/{meta.get("id") or os.path.basename(p)[:-5]}', 'w') as f: f.write(why + '\n')
+    for q in (p, p[:-5] + '.wav'):
+        try: os.remove(q)
+        except OSError: pass
+
+
+def fmt_t(s): s = int(s or 0); return f'{s // 60}:{s % 60:02d}'
+
+
+def hear_song(c, p, meta):
+    """one call with the clips (+ the lyrics when known). Returns 'done' | 'skip: why'. The clip is deleted when read or
+    when Google refuses audio (then the text reading stays)."""
+    import base64
+    if c.get('ears', '1') == '0': return 'skip: ears off'
+    ok, why = can_call(c, state())
+    if not ok: return f'skip: {why}'
+    key = key_of(meta.get('artist', ''), meta.get('title', '')); clips = meta['clips']
+    src = lyric_index().get(key); info = load_json(src, {}) if src else {}
+    lyrics = [(float(t), str(ln)) for t, ln in (info or {}).get('lyrics') or [] if str(ln).strip()]
+    lyr = ('Lyrics (seconds  line):\n' + lyric_text(lyrics, 3000)) if len(lyrics) >= 4 else 'No lyrics known (instrumental, or not found): read it from the sound.'
+    about = ('what the WORDS say: the situation, who speaks to whom, what happens or is wanted. Be concrete'
+             if len(lyrics) >= 4 else 'what the music conveys: the situation or feeling it paints. Be concrete')
+    note = 'The lyrics below have their own times.' if len(lyrics) >= 4 else ''
+    exl = '\n'.join(f'{n + 1}: {fmt_t(k["song_at"])} ({k["song_at"]:.0f} s), {k["len"]:.0f} s long' for n, k in enumerate(clips))
+    prompt = EARS_PROMPT % (len(clips), note, about, ', '.join(MOODS), meta.get('artist', ''), meta.get('title', ''), exl, lyr)
+    try: data = base64.b64encode(open(p[:-5] + '.wav', 'rb').read()).decode()
+    except OSError: return 'skip: clip gone'
+    try: text = gemini(c, prompt, max_tokens=900, audio=('audio/wav', data))
+    except Backoff as e: backoff(str(e)); return 'skip: backoff'
+    except AudioRefused as e:
+        log(f'ears: {meta.get("title", "")[:50]}: {e}: the text reading stays'); ears_done(meta, p, 'refused'); return 'skip: audio refused'
+    except RuntimeError as e: log(f'ears: {meta.get("title", "")[:50]}: {e}'); return f'skip: {e}'
+    end = float(meta.get('dur') or 0) or max([k['song_at'] + k['len'] for k in clips] + [t for t, _ in lyrics])
+    r = clean_reading(parse_json(text), lyrics, end=end + 5)
+    if not r:
+        n = int(meta.get('tries', 0)) + 1
+        if n >= 2: ears_done(meta, p, 'bad answer'); log(f'ears: {meta.get("title", "")[:50]}: answer not usable twice, given up')
+        else: meta['tries'] = n; write_json(p, meta); log(f'ears: {meta.get("title", "")[:50]}: answer was not usable JSON')
+        return 'skip: bad answer'
+    r.update(key=key, artist=meta.get('artist', ''), title=meta.get('title', ''), model=state().get('model_used', ''), ts=time.time(), v=VERSION,
+             heard=True, clips=len(clips), lyrics=len(lyrics) >= 4, ears_id=meta.get('id'))
+    r.setdefault('deli', False)
+    write_json(song_path(key), r); ears_done(meta, p, 'heard')
+    log(f'ears: heard {r["artist"]} - {r["title"]} ({len(clips)} clips): {", ".join(r["mood"]) or "-"}{" · dark core" if r["dark_core"] else ""}'
+        + (' · ДЕЛИКАТЕС' if r.get('deli') else '') + ' · ' + ' '.join(f'{fmt_t(s["at"])} {s["feel"]}' for s in r['sections']))
+    return 'done'
+
+
+# ---------------------------------------------------------------- the week
+def week_id(t=None):
+    return time.strftime('%G-W%V', time.localtime(t or time.time()))
+
+
+def plays(days):
+    out = []; since = time.time() - days * 86400
+    for p in sorted(glob.glob(f'{LISTEN}/plays-*.jsonl')):
+        for ln in open(p, encoding='utf-8'):
+            try: r = json.loads(ln)
+            except ValueError: continue
+            if r.get('ts', 0) >= since: out.append(r)
+    return out
+
+
+WEEK_PROMPT = '''You write a short weekly read of someone's listening for their private music diary.
+Plain English, second person, dry and observant, at most 110 words, no lists, no emojis, no advice, no flattery.
+Use only these numbers:
+%s
+Answer with ONE JSON object: {"read": "<the text>", "headline": "<3 to 6 words>"}'''
+
+
+def week_facts(rs):
+    import collections
+    heard = sum(r.get('heard') or 0 for r in rs); skips = sum(1 for r in rs if r.get('outcome') == 'skip')
+    art = collections.Counter(); song = collections.Counter(); mode = collections.Counter(); hurt = collections.Counter(); hours = collections.Counter()
+    for r in rs:
+        art[r.get('artist', '?')] += r.get('heard') or 0
+        if r.get('outcome') != 'skip': song[f'{r.get("title", "?")} · {r.get("artist", "?")}'] += 1
+        if r.get('mode'): mode[r['mode']] += r.get('heard') or 0
+        for h in r.get('hurt') or []: hurt[h.split(':')[0][:30]] += 1
+        hours[time.localtime(r.get('ts', 0)).tm_hour] += r.get('heard') or 0
+    late = sum(v for h, v in hours.items() if h < 5)
+    moods = collections.Counter()
+    for r in rs:
+        rd_ = load_json(song_path(key_of(r.get('artist', ''), r.get('title', ''))), {}) or {}
+        for m in rd_.get('mood') or []: moods[m] += 1
+    f = [f'plays {len(rs)}, hours {heard / 3600:.1f}, skipped {skips}, after midnight {late / 3600:.1f} h',
+         'top artists (hours): ' + ', '.join(f'{a} {s / 3600:.1f}' for a, s in art.most_common(6)),
+         'most repeated: ' + ', '.join(f'{k} ×{n}' for k, n in song.most_common(5)),
+         'dance modes (hours): ' + ', '.join(f'{m} {s / 3600:.1f}' for m, s in mode.most_common(5))]
+    if hurt: f.append('what the changeling did: ' + ', '.join(f'{k} ×{n}' for k, n in hurt.most_common(5)))
+    if moods: f.append('song moods: ' + ', '.join(f'{k} ×{n}' for k, n in moods.most_common(5)))
+    return '\n'.join(f)
+
+
+def read_week(c, force=False, now=None):
+    now = now or time.time(); wid = week_id(now); p = f'{DIR}/weeks/{wid}.json'
+    if not force and os.path.exists(p): return 'cached', load_json(p)
+    rs = plays(7)
+    if len(rs) < 10: return 'skip: under 10 plays this week', None
+    ok, why = can_call(c, state(), now)
+    if not ok: return f'skip: {why}', None
+    try: text = gemini(c, WEEK_PROMPT % week_facts(rs), max_tokens=400)
+    except Backoff as e: backoff(str(e)); return 'skip: backoff', None
+    except RuntimeError as e: log(f'week: {e}'); return f'skip: {e}', None
+    j = parse_json(text) or {}
+    read = re.sub(r'\s+', ' ', str(j.get('read') or '')).strip()
+    if not read: return 'skip: bad answer', None
+    r = dict(week=wid, read=read[:900], headline=str(j.get('headline') or '')[:60], plays=len(rs), ts=now, model=state().get('model_used', ''), v=VERSION)
+    write_json(p, r); log(f'week: {wid} read ({len(rs)} plays)'); return 'done', r
+
+
+# ---------------------------------------------------------------- service loop
+def now_playing():
+    j = load_json(MUSIC, {}) or {}
+    if not j.get('playing') or time.time() - j.get('ts', 0) > 30: return None
+    return key_of((j.get('artists') or [''])[0], j.get('title', '')), j.get('position') or 0, j.get('title', '')
+
+
+def top_unread(n):
+    import collections
+    cnt = collections.Counter(key_of(r.get('artist', ''), r.get('title', '')) for r in plays(60) if r.get('outcome') != 'skip')
+    idx = lyric_index()
+    return [k for k, _ in cnt.most_common() if k in idx and not os.path.exists(song_path(k))][:n]
+
+
+def brain_key(artist, title):
+    """the song brain's key (zarya-brain song_key), for its ears ids."""
+    import unicodedata
+    def n(s):
+        s = unicodedata.normalize('NFKD', s or '').lower()
+        return re.sub(r'\s+', ' ', re.sub(r'[^\w\s]', ' ', ''.join(c for c in s if not unicodedata.combining(c)))).strip()
+    t = re.sub(r'\s*[\(\[][^)\]]*(remaster|version|edit|mix|live|feat|with)[^)\]]*[\)\]]', '', title or '', flags=re.I)
+    t = re.sub(r'\s+-\s+.*(remaster|version|edit|live).*$', '', t, flags=re.I)
+    return f'{n(artist)}|{n(t)}'
+
+
+def rehear_old():
+    """m4: songs heard by m3 have no "deli" answer: drop their ears-done marker once so the brain clips them on the next full
+    play (their reading stays until then)."""
+    n = 0
+    for p in glob.glob(f'{DIR}/songs/*.json'):
+        j = load_json(p, {}) or {}
+        if not j.get('heard') or 'deli' in j or j.get('rehear'): continue
+        i = j.get('ears_id') or hashlib.sha1(brain_key(j.get('artist', ''), j.get('title', '')).encode()).hexdigest()[:16]
+        try: os.remove(f'{EARS_DONE}/{i}'); n += 1
+        except OSError: pass
+        j['rehear'] = True; write_json(p, j)
+    if n: log(f'ears: {n} songs heard by m3 get heard again for ДЕЛИКАТЕС (next full play)')
+    return n
+
+
+def run():
+    log(f'start {VERSION} (model {conf().get("model")}, cap {conf().get("daily_cap")}/day)')
+    try: rehear_old()
+    except Exception as e: log(f'ears: rehear error: {e}')
+    last_bf = 0; seen_game = None; last_skip = ''
+    while True:
+        c = conf()
+        try:
+            g = in_game()
+            if g != seen_game: seen_game = g; log('game: paused' if g else 'game: none, working')
+            if not g and c.get('mind') == 'gemini':
+                np = now_playing()
+                if np and np[1] >= float(c.get('min_heard') or 30) and not os.path.exists(song_path(np[0])):
+                    how, _ = read_song(c, np[0])
+                    if how.startswith('skip') and how != last_skip and how != 'skip: gap': log(f'now: {np[2][:40]}: {how}'); last_skip = how
+                wd = time.strftime('%a', time.localtime()).lower()[:3]
+                if wd == (c.get('week_day') or 'sun')[:3] and time.localtime().tm_hour >= 20 and not os.path.exists(f'{DIR}/weeks/{week_id()}.json'):
+                    read_week(c)
+                if c.get('ears', '1') != '0' and not (np and np[1] >= float(c.get('min_heard') or 30) and not os.path.exists(song_path(np[0]))):
+                    pend = ears_pending()                                               # m3: the song brain cut clips
+                    if pend:
+                        how = hear_song(c, *pend[0])
+                        if how.startswith('skip') and how not in (last_skip, 'skip: gap') and not how.startswith('skip: backing off'): log(f'ears: {how}'); last_skip = how
+                per_h = float(c.get('backfill_per_hour') or 0)
+                if per_h > 0 and time.time() - last_bf > 3600 / per_h and not np:
+                    last_bf = time.time()
+                    for k in top_unread(1): read_song(c, k)
+        except Exception as e:
+            log(f'loop error: {type(e).__name__}: {e}')
+        time.sleep(15)
+
+
+# ---------------------------------------------------------------- CLI
+def find(text):
+    t = norm(text); out = []
+    for p in glob.glob(f'{DIR}/songs/*.json'):
+        j = load_json(p, {}) or {}
+        if t in norm(j.get('artist', '') + ' ' + j.get('title', '')): out.append(j)
+    return out
+
+
+def show(r):
+    print(f'{r.get("artist")} - {r.get("title")}  [{", ".join(r.get("mood") or []) or "-"}{" · dark core" if r.get("dark_core") else ""}'
+          f'{" · heard" if r.get("heard") else ""}{" · ДЕЛИКАТЕС" if r.get("deli") else ""}]')
+    print(f'  {r.get("about")}')
+    if r.get('sound'): print(f'  sound: {r["sound"]}')
+    if r.get('sections'): print('  ' + ' · '.join(f'{int(s["at"]) // 60}:{int(s["at"]) % 60:02d} {s["feel"]}' for s in r['sections']))
+
+
+def batch(c, keys, force=False):
+    """m2: read keys one by one; waits out the gap and short backoffs (≤ 3 min), stops on the cap or a long backoff."""
+    done = 0
+    for k in keys:
+        for _ in range(40):
+            how, r = read_song(c, k, force=force)
+            if how == 'skip: gap': time.sleep(2); continue
+            if how == 'skip: backoff' or how.startswith('skip: backing off'):
+                wait = state().get('backoff_until', 0) - time.time()
+                if 0 < wait <= 180: print(f'  Google busy, waiting {int(wait)} s…'); time.sleep(wait + 1); continue
+            break
+        print(f'{how}: {k}')
+        if how.startswith('skip') and not how.startswith('skip: bad answer'): break
+        if how == 'done': done += 1
+    print(f'{done} read'); return 0
+
+
+def cli():
+    a = sys.argv[1:]; cmd = a[0] if a else 'status'; c = conf()
+    if cmd in ('-h', '--help', 'help'): print(open(__file__, encoding='utf-8').read().split('\nimport ', 1)[0].replace('# ', '')); return 0
+    if cmd == '--version': print(f'zarya-mind {VERSION}'); return 0
+    if cmd == 'run': run(); return 0
+    if cmd == 'status':
+        st = state(); n = len(glob.glob(f'{DIR}/songs/*.json')); w = sorted(glob.glob(f'{DIR}/weeks/*.json'))
+        print(f'zarya-mind {VERSION} · mind={c.get("mind")} · model {c.get("model")} (fallback {c.get("fallback")}) · last used {st.get("model_used") or "-"}')
+        print(f'key: {"present" if rd(KEYF).strip() else "MISSING"} · calls today {calls_today(st)}/{c.get("daily_cap")} · '
+              + (f'backing off until {time.strftime("%H:%M", time.localtime(st["backoff_until"]))}' if time.time() < st.get('backoff_until', 0) else 'no backoff'))
+        heard = sum(1 for p in glob.glob(f'{DIR}/songs/*.json') if (load_json(p, {}) or {}).get('heard'))
+        print(f'ears: {"on" if c.get("ears", "1") != "0" else "off"} · {heard} songs heard · {len(ears_pending())} clips waiting')
+        print(f'songs read: {n} · weeks: {len(w)}{" (last " + os.path.basename(w[-1])[:-5] + ")" if w else ""} · lyrics known for {len(lyric_index())} songs · in a game now: {in_game()}')
+        return 0
+    if cmd == 'test':
+        ok, why = can_call(c, state())
+        if not ok and why != 'gap': print(f'not now: {why}'); return 1
+        try: text = gemini(c, 'Reply with the JSON {"ok": true}.', max_tokens=20)
+        except Backoff as e: backoff(str(e)); print('rate limited (429): it backs off and tries later'); return 1
+        except RuntimeError as e: print(f'failed: {e}'); return 1
+        print(f'OK · {state().get("model_used")} answered: {text.strip()[:60]}'); log('test: ok'); return 0
+    if cmd == 'now':
+        np = now_playing()
+        if not np: print('nothing playing'); return 1
+        how, r = read_song(c, np[0], force='--force' in a); print(how); r and show(r); return 0
+    if cmd == 'song' and len(a) > 1:
+        m = re.match(r'\s*(.+?)\s+-\s+(.+)', a[1])
+        if not m: print('usage: zarya-mind song "ARTIST - TITLE"'); return 1
+        how, r = read_song(c, key_of(m.group(1), m.group(2)), force='--force' in a); print(how); r and show(r); return 0
+    if cmd == 'show' and len(a) > 1:
+        rs = find(' '.join(a[1:])); [show(r) for r in rs] or print('none read yet'); return 0
+    if cmd == 'backfill':
+        n = int(a[1]) if len(a) > 1 and a[1].isdigit() else 10; done = 0
+        return batch(c, top_unread(n))
+    if cmd == 'reread':
+        old = [j['key'] for j in (load_json(p, {}) or {} for p in glob.glob(f'{DIR}/songs/*.json')) if j.get('key') and j.get('v') == 'm1']
+        print(f'{len(old)} older readings'); return batch(c, old, force=True)
+    if cmd == 'ears':
+        for p, j in ears_pending(): print(f'waiting: {j.get("artist")} - {j.get("title")} ({len(j["clips"])} clips, {sum(k["len"] for k in j["clips"]):.0f} s)')
+        for r in (load_json(p, {}) or {} for p in glob.glob(f'{DIR}/songs/*.json')):
+            if r.get('heard'): show(r)
+        return 0
+    if cmd == 'week':
+        how, r = read_week(c, force='--force' in a); print(how)
+        if r: print(f'{r["week"]} · {r.get("headline")}\n{r["read"]}')
+        return 0
+    print('usage: zarya-mind status | test | now | song "ARTIST - TITLE" | show TEXT | backfill [N] | reread | ears | week [--force] | run'); return 1
+
+
+if __name__ == '__main__':
+    sys.exit(cli())

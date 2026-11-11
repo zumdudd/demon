@@ -1,0 +1,762 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA ⇢ SLMAEVE :: ДЕМОН's song brain (b6, mint-pack v52: EARS: short clips of each song for zarya-mind to hear (AI 2b); b5, mint-pack v33: lure() = cute + dark by sound; b4, mint-pack v32: drops vs the gap, onset-timed; b3, mint-pack v31: dynamics, drop power + hits, ДЕЛИКАТЕС score; b2, mint-pack v29: voice + aggression per section, style → dance mode; b1 mint-pack v28). Module for zarya-daemon-desk + a CLI.
+# The first time a song plays all the way through, ДЕМОН records what he hears (the speakers' monitor, mono 22 kHz, a temp file
+# that is deleted after) and studies it in the background: where each section starts and which ones repeat (verse / chorus),
+# the chorus, where the drops land and the builds before them, the energy curve, the key (major / minor), and, with the
+# Essentia models installed, mood (happy / sad / aggressive / relaxed / party), danceability, singing vs instrumental and the
+# style (400 Discogs styles). The result is a small map per song; from the second play on he knows what is coming.
+# Your Spotify history adds weight: favourites (100+ plays) get his reactions twice as often, songs you always skip half.
+#   zarya-brain now              the map of the song playing now (and where you are in it)
+#   zarya-brain list             songs he has studied
+#   zarya-brain show TEXT        the map of a studied song (title or artist words)
+#   zarya-brain study FILE       study an audio file (wav / mp3 / flac…) and print the map (needs the models env)
+#   zarya-brain forget TEXT      drop a map (he studies the song again next time)
+#   zarya-brain grit             b3: how close each studied song is to Death Grips (ДЕЛИКАТЕС score, logged only in v31)
+#   zarya-brain weights          rebuild song weights from the imported Spotify history (zarya-journal import)
+#   zarya-brain setup            create the analysis env (~700 MB: numpy + essentia-tensorflow) and download the models
+#   zarya-brain doctor
+#   b6 ears: with zarya-mind's ears on (~/.config/zarya/mind.conf: mind=gemini, ears=1), each song plays through once more for
+#   its clips (also songs he studied before): up to 8 × 10 s, one per section, written to ~/.cache/zarya-brain/ears/ as a
+#   16-bit mono WAV. zarya-mind sends that clip to Gemini (free tier) and deletes it. Never in games (no capture there).
+# Files: ~/.local/share/zarya/brain/{maps/*.json, env/, models/, weights.json}, temp captures in ~/.cache/zarya-brain/,
+#        log ~/.cache/zarya-brain.log
+import os, sys, json, time, glob, math, hashlib, subprocess, re, unicodedata
+
+VERSION = 'b6'
+HOME = os.path.expanduser('~')
+DIR = f'{HOME}/.local/share/zarya/brain'
+MAPS = f'{DIR}/maps'
+ENV = f'{DIR}/env'
+MODELS = f'{DIR}/models'
+WEIGHTS = f'{DIR}/weights.json'
+CAP = f'{HOME}/.cache/zarya-brain'
+LOG = f'{HOME}/.cache/zarya-brain.log'
+EARS = f'{CAP}/ears'                                                  # b6
+EARS_DONE = f'{HOME}/.local/share/zarya/mind/ears-done'
+MIND_CONF = f'{HOME}/.config/zarya/mind.conf'
+EARS_N, EARS_LEN, EARS_MAX_PENDING, EARS_TTL = 8, 10.0, 20, 3 * 86400
+SR = 22050
+ONSET_LAG = 0.05                                                        # b4: flux frame -> onset time (calibrated)
+MAX_CAP = 15 * 60
+MODEL_BASE = 'https://essentia.upf.edu/models'
+EMBED = ('feature-extractors/discogs-effnet/discogs-effnet-bs64-1.pb', None)
+HEADS = ['mood_happy', 'mood_sad', 'mood_aggressive', 'mood_relaxed', 'mood_party', 'danceability', 'voice_instrumental']
+GENRE = 'genre_discogs400'
+SECTION_RU = dict(intro='ВСТУПЛЕНИЕ', verse='КУПЛЕТ', chorus='ПРИПЕВ', bridge='БРИДЖ', outro='КОНЦОВКА', drop='ДРОП', part='ЧАСТЬ')
+_logf = None
+
+
+def log(msg):
+    if _logf: return _logf(f'brain: {msg}')
+    try:
+        os.makedirs(os.path.dirname(LOG), exist_ok=True)
+        with open(LOG, 'a', encoding='utf-8') as f: f.write(time.strftime('%F %T ') + msg + '\n')
+    except OSError: pass
+
+
+def set_logger(f):
+    global _logf; _logf = f
+
+
+def norm(s):
+    s = unicodedata.normalize('NFKD', s or '').lower()
+    return re.sub(r'\s+', ' ', re.sub(r'[^\w\s]', ' ', ''.join(c for c in s if not unicodedata.combining(c)))).strip()
+
+
+def song_key(artist, title):
+    t = re.sub(r'\s*[\(\[][^)\]]*(remaster|version|edit|mix|live|feat|with)[^)\]]*[\)\]]', '', title or '', flags=re.I)
+    t = re.sub(r'\s+-\s+.*(remaster|version|edit|live).*$', '', t, flags=re.I)
+    return f'{norm(artist)}|{norm(t)}'
+
+
+def map_path(key): return f'{MAPS}/{hashlib.sha1(key.encode()).hexdigest()[:16]}.json'
+
+
+def load_map(key):
+    try: return json.load(open(map_path(key), encoding='utf-8'))
+    except (OSError, ValueError): return None
+
+
+def env_python():
+    p = f'{ENV}/bin/python3'
+    return p if os.path.exists(p) else None
+
+
+# ============================================================ b6 ears (stdlib only)
+_EW = {'t': 0, 'on': False}
+def ears_wanted():
+    """zarya-mind wants clips: mind=gemini and ears≠0 in mind.conf (looked at once a minute)."""
+    if time.time() - _EW['t'] < 60: return _EW['on']
+    c = {'mind': 'gemini', 'ears': '1'}
+    try:
+        for ln in open(MIND_CONF, encoding='utf-8'):
+            m = re.match(r'\s*([a-z_]+)\s*=\s*(.*?)\s*(#.*)?$', ln)
+            if m: c[m.group(1)] = m.group(2)
+    except OSError: pass
+    _EW.update(t=time.time(), on=c.get('mind') == 'gemini' and c.get('ears', '1') != '0')
+    return _EW['on']
+
+
+def ears_id(key): return hashlib.sha1(key.encode()).hexdigest()[:16]
+
+
+def ears_needed(key):
+    """no clip waiting and zarya-mind has not heard this song yet."""
+    i = ears_id(key)
+    return not os.path.exists(f'{EARS_DONE}/{i}') and not os.path.exists(f'{EARS}/{i}.json')
+
+
+def ears_clean(now=None):
+    now = now or time.time()
+    js = sorted(glob.glob(f'{EARS}/*.json'), key=lambda p: os.path.getmtime(p))
+    for k, p in enumerate(js):
+        if now - os.path.getmtime(p) > EARS_TTL or k < len(js) - EARS_MAX_PENDING:
+            for q in (p, p[:-5] + '.wav'):
+                try: os.remove(q)
+                except OSError: pass
+
+
+def ears_cut(pcm, sr, meta, sections):
+    """pcm = raw s16le mono bytes from song time meta.offset. One clip per section (the 8 longest spread over the song when
+    there are more), each up to 10 s, starting a little into the section; joined with 0.3 s of silence. Writes the WAV +
+    its json (song times of each clip) to EARS. Returns the json path or None."""
+    import wave
+    off = float(meta.get('offset') or 0); n = len(pcm) // 2; total = n / sr
+    secs = [(float(s['t0']), float(s['t1']), s.get('kind', ''), s.get('label', '')) for s in sections or [] if float(s['t1']) - float(s['t0']) >= 3]
+    if not secs:
+        step = total / EARS_N; secs = [(off + k * step, off + (k + 1) * step, 'part', '') for k in range(EARS_N)]
+    if len(secs) > EARS_N:
+        keep = sorted(sorted(range(len(secs)), key=lambda k: -(secs[k][1] - secs[k][0]))[:EARS_N]); secs = [secs[k] for k in keep]
+    gap = b'\x00\x00' * int(0.3 * sr); out = []; clips = []; at = 0.0
+    for t0, t1, kind, label in secs:
+        a = t0 + min(2.0, 0.15 * (t1 - t0)); ln = min(EARS_LEN, t1 - a)
+        i0 = int((a - off) * sr); i1 = int((a - off + ln) * sr)
+        if i0 < 0 or i1 > n or ln < 2: continue
+        out.append(pcm[2 * i0:2 * i1]); clips.append(dict(song_at=round(a, 1), len=round(ln, 1), clip_at=round(at, 1), kind=kind, label=label))
+        at += ln + 0.3; out.append(gap)
+    if not clips: return None
+    os.makedirs(EARS, exist_ok=True); i = ears_id(meta['key']); wp = f'{EARS}/{i}.wav'
+    with wave.open(wp + '.tmp', 'wb') as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr); w.writeframes(b''.join(out))
+    os.replace(wp + '.tmp', wp)
+    jp = f'{EARS}/{i}.json'
+    with open(jp + '.tmp', 'w', encoding='utf-8') as f:
+        json.dump(dict(artist=meta.get('artist', ''), title=meta.get('title', ''), dur=meta.get('dur'), bkey=meta['key'], id=i,
+                       sr=sr, clips=clips, ts=time.time()), f, ensure_ascii=False)
+    os.replace(jp + '.tmp', jp); ears_clean()
+    log(f'ears: {meta.get("artist")} - {meta.get("title")}: {len(clips)} clips, {sum(c["len"] for c in clips):.0f} s for zarya-mind')
+    return jp
+
+
+def ears_only(raw, metap):
+    """b6: a song he already knew played through again: cut its clips from the map's sections, delete the recording."""
+    meta = json.load(open(metap, encoding='utf-8'))
+    try: pcm = open(raw, 'rb').read()
+    finally:
+        for p in (raw, metap):
+            try: os.remove(p)
+            except OSError: pass
+    m = load_map(meta['key']) or {}
+    return ears_cut(pcm, SR, meta, m.get('sections'))
+
+
+# ============================================================ live side (imported by the desktop ДЕМОН, no numpy here)
+class Brain:
+    """One song at a time: loads its map, or records it the first time it plays through, then studies it in the background."""
+    def __init__(self):
+        self.key = None; self.map = None; self.cap = None; self.meta = None; self.weights = None; self.weights_t = 0
+        self.last_sec = None; self.studying = set()
+        os.makedirs(MAPS, exist_ok=True); os.makedirs(CAP, exist_ok=True)
+        for f in glob.glob(f'{CAP}/*.raw'):                                    # leftovers from a crash
+            try: os.remove(f)
+            except OSError: pass
+
+    # ---- capture
+    def track(self, now, artist, title, album, dur, pos, playing):
+        """call on every track change (also with artist None when music stops)."""
+        self.finish(now, pos_end=None)
+        self.key = song_key(artist, title) if artist and title else None
+        self.map = load_map(self.key) if self.key else None; self.last_sec = None
+        if self.map: log(f'map: {artist} - {title} ({len(self.map.get("sections", []))} sections, {self.map.get("engine")})')
+        # a track change means the song is starting: offset 0 (a stale position from the last song is ignored). If we joined
+        # mid-song, the first real position read makes check() see a jump and drop the recording.
+        if self.key and not self.map and playing and dur and 60 <= dur <= MAX_CAP and env_python() and self.key not in self.studying:
+            self.start(now, dict(artist=artist, title=title, album=album or '', dur=dur, key=self.key, ears=self.ears_on()), 0.0)
+        elif self.key and self.map and playing and dur and 60 <= dur <= MAX_CAP and self.ears_on() and ears_needed(self.key):   # b6
+            self.start(now, dict(artist=artist, title=title, album=album or '', dur=dur, key=self.key, ears=True, ears_only=True), 0.0)
+
+    def ears_on(self):
+        try: return ears_wanted()
+        except Exception: return False
+
+    def start(self, now, meta, pos):
+        path = f'{CAP}/{hashlib.sha1(meta["key"].encode()).hexdigest()[:16]}.raw'
+        try:
+            f = open(path, 'wb')
+            p = subprocess.Popen(['parec', '--device=@DEFAULT_MONITOR@', '--format=s16le', f'--rate={SR}', '--channels=1', '--latency-msec=250'],
+                                 stdout=f, stderr=subprocess.DEVNULL, start_new_session=True)
+            f.close()
+        except (OSError, FileNotFoundError) as e:
+            log(f'capture: cannot start parec ({e})'); return
+        self.cap = dict(proc=p, path=path, t0=now, pos0=pos, meta=meta, ok=True, why='')
+        log(f'capture: listening to {meta["artist"]} - {meta["title"]} from {pos:.0f}s ' + ('for its ears clips (zarya-mind)' if meta.get('ears_only') else 'to study it'))
+
+    def abort(self, why):
+        c = self.cap
+        if not c: return
+        c['ok'] = False; c['why'] = why; self.finish(time.time(), None)
+
+    def check(self, now, pos, playing):
+        """every second: a pause or a seek spoils the recording (it is retried next time the song plays)."""
+        c = self.cap
+        if not c or not c['ok']: return
+        if not playing:                                                          # 2 s grace: players blink 'Paused' between songs
+            c.setdefault('pause_t', now)
+            if now - c['pause_t'] > 2: return self.abort('paused')
+            return
+        c.pop('pause_t', None)
+        if now - c['t0'] > 4 and pos is not None and pos > 1 and abs(pos - (c['pos0'] + now - c['t0'])) > 4: return self.abort('seek or joined mid-song')
+        if now - c['t0'] > MAX_CAP: return self.abort('too long')
+
+    def finish(self, now, pos_end):
+        c = self.cap; self.cap = None
+        if not c: return
+        try: os.killpg(c['proc'].pid, 15)
+        except OSError: pass
+        try: c['proc'].wait(timeout=2)
+        except Exception: pass
+        heard = now - c['t0']; dur = c['meta']['dur']
+        if not c['ok'] or heard < 0.6 * dur:
+            log(f'capture: not studied ({c["why"] or f"only {heard:.0f}s of {dur:.0f}s"}): {c["meta"]["title"]}')
+            try: os.remove(c['path'])
+            except OSError: pass
+            return
+        meta = dict(c['meta'], offset=c['pos0'], heard=round(heard, 1), recorded=time.strftime('%F %T'))
+        mp = c['path'][:-4] + '.json'
+        with open(mp, 'w', encoding='utf-8') as f: json.dump(meta, f, ensure_ascii=False)
+        if meta.get('ears_only'):                                                # b6: stdlib cut, no study
+            subprocess.Popen(['nice', '-n', '15', sys.executable or 'python3', '-I', os.path.abspath(__file__), 'ears', c['path'], mp],
+                             stdout=subprocess.DEVNULL, stderr=open(f'{CAP}/last-ears.err', 'w'), start_new_session=True)
+            log(f'ears: cutting clips of {meta["artist"]} - {meta["title"]}'); return
+        py = env_python()
+        if not py: return
+        self.studying.add(meta['key'])
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES='-1', OMP_NUM_THREADS='2', TF_CPP_MIN_LOG_LEVEL='3')
+        subprocess.Popen(['nice', '-n', '15', py, '-I', os.path.abspath(__file__), 'analyze', c['path'], mp], env=env,
+                         stdout=subprocess.DEVNULL, stderr=open(f'{CAP}/last-study.err', 'w'), start_new_session=True)
+        log(f'study: {meta["artist"]} - {meta["title"]} ({heard:.0f}s recorded)')
+
+    def learning(self): return bool(self.cap and self.cap['ok'])
+
+    def refresh(self):
+        """a study finished while the song still plays: pick the map up."""
+        if self.key and not self.map:
+            self.map = load_map(self.key)
+            if self.map: self.studying.discard(self.key); log(f'map ready: {self.map.get("title")}')
+
+    # ---- what the map says right now
+    def ctx(self, pos):
+        m = self.map
+        if not m or pos is None: return None
+        secs = m.get('sections') or []
+        i = next((k for k, s in enumerate(secs) if s['t0'] <= pos < s['t1']), None)
+        sec = secs[i] if i is not None else None
+        nxt = [d for d in m.get('drops') or [] if d > pos - 0.15]
+        drop_in = nxt[0] - pos if nxt else None
+        ch = [s['t0'] for s in secs if s.get('chorus') and s['t0'] > pos]
+        en = m.get('energy') or []
+        e = en[min(len(en) - 1, int(pos))] if en else None
+        new_sec = i is not None and i != self.last_sec; self.last_sec = i
+        ds = m.get('drops') or []; pw = m.get('drop_power') or []; hs = m.get('drop_hits') or []
+        ni = next((k for k, d in enumerate(ds) if d > pos - 0.15), None)                     # b3
+        li = max((k for k, d in enumerate(ds) if d <= pos), default=None)
+        return dict(drop_power=pw[ni] if ni is not None and ni < len(pw) else None, drop_at=ds[ni] if ni is not None else None,
+                    last_drop=ds[li] if li is not None else None, last_hits=hs[li] if li is not None and li < len(hs) else None,
+                    crush=(m.get('dyn') or {}).get('crush'), delicacy=m.get('delicacy'), quiet=e is not None and e < 0.15,
+                    sec=i, label=sec['label'] if sec else None, kind=sec['kind'] if sec else None, chorus=bool(sec and sec.get('chorus')),
+                    voice=sec.get('voice') if sec else None, aggr=sec.get('aggressive') if sec else None,
+                    t0=sec['t0'] if sec else None, t1=sec['t1'] if sec else None,
+                    drop_in=drop_in, chorus_in=(ch[0] - pos) if ch else None, energy=e, new_sec=new_sec,
+                    build=any(b[0] <= pos < b[1] for b in m.get('builds') or []))
+
+    def targets(self, n, gap=40.0, skip=20.0, drops_only=False):
+        """b3: the n hardest drops (≥ gap s apart, not in the first skip s): where ПОДМЕНЫШ blows up. Old maps without
+        drop power: the drops in order; no drops: the section starts with the biggest energy jump."""
+        m = self.map or {}
+        ds = m.get('drops') or []; pw = m.get('drop_power') or [1.0] * len(ds)
+        cand = [(p, d) for d, p in zip(ds, pw) if d >= skip and (not drops_only or (p or 0) >= 1.8)]
+        if not cand and not drops_only:
+            secs = m.get('sections') or []
+            cand = [(s['energy'] - secs[k - 1]['energy'], s['t0']) for k, s in enumerate(secs) if k and s['t0'] >= skip and s['energy'] > secs[k - 1]['energy']]
+        out = []
+        for p, d in sorted(cand, key=lambda c: -c[0]):
+            if all(abs(d - o) >= gap for o in out): out.append(d)
+            if len(out) >= n: break
+        return sorted(out)
+
+    def weather(self):
+        """(weather, why) from the sound models, '' when unsure."""
+        mo = (self.map or {}).get('mood') or {}
+        if not mo: return '', ''
+        minor = (self.map or {}).get('mode') == 'minor'
+        if mo.get('aggressive', 0) >= 0.7: return 'storm', f'the sound: aggressive {mo["aggressive"]:.2f}'
+        if mo.get('sad', 0) >= 0.65 or (minor and mo.get('sad', 0) >= 0.5 and mo.get('happy', 1) < 0.4): return 'rain', f'the sound: sad {mo["sad"]:.2f}'
+        if mo.get('happy', 0) >= 0.65 or mo.get('party', 0) >= 0.7: return 'clear', f'the sound: happy {mo.get("happy", 0):.2f}'
+        if mo.get('relaxed', 0) >= 0.75 and minor: return 'dawn', f'the sound: relaxed, minor'
+        return '', ''
+
+    def epic(self):
+        g = ' '.join(n.lower() for n, _ in (self.map or {}).get('genre') or [])
+        return any(w in g for w in ('power metal', 'symphonic metal', 'score', 'soundtrack', 'heroic', 'epic'))
+
+    def mode(self, tag_mode):
+        """b2: (mode, variant, why) from the sound's style (Discogs styles matched against zarya-music's tag words), or None."""
+        sc = {}
+        for name, p in (self.map or {}).get('genre') or []:
+            style = name.split(' / ')[-1].strip().lower()
+            for mv, words in tag_mode.items():
+                if style in words or any(w in style.split() for w in words if ' ' not in w and len(w) > 3):
+                    sc[mv] = sc.get(mv, 0) + p
+        if not sc: return None
+        mv, v = max(sc.items(), key=lambda kv: kv[1])
+        return (mv[0], mv[1], f'the sound: {self.map["genre"][0][0].split(" / ")[-1]}') if v >= 0.25 else None
+
+    def section(self, pos):
+        m = self.map or {}
+        return next((s for s in m.get('sections') or [] if s['t0'] <= (pos or -1) < s['t1']), None)
+
+    def hard(self):
+        mo = (self.map or {}).get('mood') or {}
+        return mo.get('aggressive', 0) >= 0.75
+
+    CUTE_STYLES = ('j-pop', 'k-pop', 'vocaloid', 'idol', 'anime', 'bubblegum', 'kawaii', 'j-core', 'nightcore')
+    DARK_STYLES = ('breakcore', 'jungle', 'drum n bass', 'metal', 'industrial', 'hardcore', 'gabber', 'speedcore', 'noise', 'digital hardcore')
+
+    def lure(self):
+        """b5: ПРИМАНКА by sound: sung, with a cute side (happy / party mood or a cute style) AND a dark side (aggressive mood
+        or a dark style). (True / False, why) or (None, '') without a studied map."""
+        m = self.map or {}; mo = m.get('mood') or {}
+        if not mo and not m.get('genre'): return None, ''
+        g = ' '.join(n.lower() for n, _ in m.get('genre') or [])
+        cs = [w for w in self.CUTE_STYLES if w in g]; ds = [w for w in self.DARK_STYLES if w in g]
+        cute = mo.get('happy', 0) >= 0.45 or mo.get('party', 0) >= 0.6 or bool(cs)
+        dark = mo.get('aggressive', 0) >= 0.5 or bool(ds)
+        sung = mo.get('voice', 1.0) >= 0.5
+        why = (f"voice {mo.get('voice', '?')}, happy {mo.get('happy', '?')}, party {mo.get('party', '?')}, aggressive {mo.get('aggressive', '?')}"
+               + (f", cute styles {cs}" if cs else '') + (f", dark styles {ds}" if ds else ''))
+        return bool(cute and dark and sung), why
+
+    # ---- your history
+    def weight(self, artist, title):
+        """reaction-gap multiplier: 0.5 for favourites, 2.0 for songs you mostly skip, 1.0 otherwise."""
+        now = time.time()
+        if self.weights is None or now - self.weights_t > 3600:
+            self.weights_t = now
+            try: self.weights = json.load(open(WEIGHTS, encoding='utf-8'))
+            except (OSError, ValueError): self.weights = {}
+        w = self.weights.get(song_key(artist, title))
+        if not w: return 1.0
+        n, sk = w
+        if n >= 100: return 0.5
+        if n + sk >= 10 and sk > 1.5 * n: return 2.0
+        return 1.0
+
+
+def label_for(m, ctx):
+    """caption words: ПРИПЕВ / ДРОП ▸ 3 / ИЗУЧАЮ."""
+    if not ctx: return ''
+    if ctx['drop_in'] is not None and 0 < ctx['drop_in'] <= 4: return f'ДРОП ▸ {math.ceil(ctx["drop_in"])}'
+    if ctx['chorus']: return SECTION_RU['chorus']
+    return ''
+
+
+# ============================================================ study (runs in the analysis env: numpy, essentia optional)
+def analyze(raw, metap):
+    import numpy as np
+    meta = json.load(open(metap, encoding='utf-8'))
+    x = np.fromfile(raw, dtype='<i2').astype(np.float32) / 32768.0
+    pcm = open(raw, 'rb').read() if meta.get('ears') else None                 # b6
+    for p in (raw, metap):
+        try: os.remove(p)
+        except OSError: pass
+    m = study(x, SR, meta)
+    os.makedirs(MAPS, exist_ok=True)
+    with open(map_path(meta['key']) + '.tmp', 'w', encoding='utf-8') as f: json.dump(m, f, ensure_ascii=False)
+    os.replace(map_path(meta['key']) + '.tmp', map_path(meta['key']))
+    log(f'study done: {meta["artist"]} - {meta["title"]}: {len(m["sections"])} sections, {len(m["drops"])} drops, key {m["key"]}, '
+        f'mood {m.get("mood") or "-"}, engine {m["engine"]}')
+    log(f'grit: {meta["artist"]} - {meta["title"]}: ДЕЛИКАТЕС {m.get("delicacy")} {m.get("grit")} dyn {m.get("dyn")}')
+    if pcm is not None:
+        try: ears_cut(pcm, SR, meta, m.get('sections'))
+        except Exception as e: log(f'ears: cut failed ({e})')
+    return m
+
+
+def study(x, sr, meta):
+    import numpy as np
+    off = float(meta.get('offset') or 0)
+    if x.size < sr * 20: raise ValueError('too short')
+    # --- spectra, 0.5 s frames
+    n_fft, hop = 4096, 2048
+    win = np.hanning(n_fft).astype(np.float32)
+    nfr = 1 + (x.size - n_fft) // hop
+    idx = np.arange(n_fft)[None, :] + hop * np.arange(nfr)[:, None]
+    S = np.abs(np.fft.rfft(x[idx] * win, axis=1)).astype(np.float32)          # (frames, bins)
+    freqs = np.fft.rfftfreq(n_fft, 1 / sr)
+    rms = np.sqrt(np.mean(x[idx] ** 2, axis=1))
+    # chroma (55 Hz - 5 kHz)
+    ok = (freqs >= 55) & (freqs <= 5000)
+    pc = (np.round(12 * np.log2(freqs[ok] / 440.0)) + 9) % 12
+    C = np.zeros((nfr, 12), np.float32)
+    for k in range(12): C[:, k] = (S[:, ok][:, pc == k] ** 2).sum(axis=1)
+    # log band energies (24 bands, 40 Hz - 10 kHz)
+    edges = np.geomspace(40, min(10000, sr / 2 - 1), 25)
+    B = np.stack([(S[:, (freqs >= edges[i]) & (freqs < edges[i + 1])] ** 2).sum(axis=1) for i in range(24)], axis=1)
+    L = np.log1p(B * 100)
+    # onset strength (spectral flux)
+    flux = np.r_[0, np.maximum(0, np.diff(np.log1p(S * 10), axis=0)).sum(axis=1)]
+    fps = sr / hop
+    def pool(a, size):
+        n = int(len(a) / size); return np.array([a[int(i * size):int((i + 1) * size)].mean(axis=0) for i in range(n)])
+    step = fps * 0.5                                                           # 0.5 s units
+    Cp, Lp, Ep, Fp = pool(C, step), pool(L, step), pool(rms, step), pool(flux, step)
+    Cn = Cp / (np.linalg.norm(Cp, axis=1, keepdims=True) + 1e-9)
+    Ln = (Lp - Lp.mean(axis=0)) / (Lp.std(axis=0) + 1e-6)
+    def smooth(a, w):                                                        # chords change every bar: compare 4 s windows
+        k_ = np.ones(w) / w
+        return np.stack([np.convolve(np.pad(a[:, j], (w // 2, w - 1 - w // 2), mode='edge'), k_, mode='valid') for j in range(a.shape[1])], axis=1)
+    F = np.hstack([smooth(Cn, 8) * 2.0, smooth(Ln, 8) * 0.6])
+    F = F / (np.linalg.norm(F, axis=1, keepdims=True) + 1e-9)
+    Er = Ep.copy()                                                           # b4: raw 0.5 s energy (gaps survive)
+    Ep = smooth(Ep[:, None], 4)[:, 0]
+    n = len(F)
+    # --- novelty (checkerboard kernel over the self-similarity), boundaries ≥ 6 s apart
+    SSM = F @ F.T
+    k = 16
+    g = np.outer(np.r_[-np.ones(k), np.ones(k)], np.r_[-np.ones(k), np.ones(k)])
+    g *= np.outer(np.hanning(2 * k), np.hanning(2 * k))
+    P = np.pad(SSM, k, mode='edge')
+    nov = np.array([(P[i:i + 2 * k, i:i + 2 * k] * -g).sum() for i in range(n)])
+    nov = np.maximum(0, nov); nov /= (nov.max() + 1e-9)
+    en = Ep / (np.percentile(Ep, 95) + 1e-9)
+    ejump = np.r_[np.zeros(4), np.abs(np.array([en[i:i + 4].mean() - en[i - 4:i].mean() for i in range(4, n)]))]
+    score = nov + 0.6 * np.clip(ejump, 0, 1)
+    bnd = [0]
+    thr = float(np.mean(score) + 0.5 * np.std(score))                       # local peaks above the song's own level
+    peaks = [i for i in range(8, n - 8) if score[i] >= score[max(0, i - 6):i + 7].max() and score[i] > thr]
+    for i in sorted(peaks, key=lambda i: -score[i]):
+        if all(abs(i - b) >= 12 for b in bnd): bnd.append(int(i))
+    bnd = sorted(bnd) + [n]
+    if os.environ.get('ZB_DEBUG'): print('score', [(i, round(float(score[i]), 2)) for i in range(0, n, 4)], 'thr', round(float(thr), 2), 'bnd', bnd)
+    # --- label sections by similarity (A, B, C…)
+    segs = []
+    for a, b in zip(bnd[:-1], bnd[1:]):
+        if b - a < 2: continue
+        segs.append(dict(a=a, b=b, f=F[a:b].mean(axis=0), e=float(en[a:b].mean()), on=float(Fp[a:b].mean())))
+    labels = []
+    for s in segs:
+        best, bs = None, 0.0
+        for L_ in labels:
+            sim = float(s['f'] @ L_['f'] / (np.linalg.norm(s['f']) * np.linalg.norm(L_['f']) + 1e-9))
+            if sim > bs: best, bs = L_, sim
+        if best is not None and bs > 0.92: s['lab'] = best['name']; best['n'] += 1
+        else:
+            nm = chr(ord('A') + len(labels)) if len(labels) < 26 else 'Z'
+            labels.append(dict(name=nm, f=s['f'], n=1)); s['lab'] = nm
+    emax = max(s['e'] for s in segs)
+    reps = {L_['name']: L_['n'] for L_ in labels}
+    lab_e = {nm: np.mean([s['e'] for s in segs if s['lab'] == nm]) for nm in reps}
+    cand = [nm for nm in reps if reps[nm] >= 2]
+    chorus = max(cand, key=lambda nm: lab_e[nm] * (1 + 0.15 * reps[nm])) if cand else max(lab_e, key=lab_e.get)
+    out = []
+    for i, s in enumerate(segs):
+        kind = 'chorus' if s['lab'] == chorus else 'intro' if i == 0 and s['e'] < 0.6 * emax else \
+               'outro' if i == len(segs) - 1 and s['e'] < 0.6 * emax else 'verse' if reps[s['lab']] >= 2 else 'part'
+        out.append(dict(t0=round(off + s['a'] * 0.5, 1), t1=round(off + s['b'] * 0.5, 1), label=s['lab'], kind=kind,
+                        chorus=kind == 'chorus', energy=round(s['e'] / (emax + 1e-9), 2)))
+    # --- drops: a section that starts much louder than the 6 s before it; builds = the 6 s before when rising
+    drops, builds, powers = [], [], []
+    for s in segs[1:]:
+        a = s['a']; before = en[max(0, a - 12):a]; after = en[a:a + 8]
+        if len(before) < 6 or len(after) < 4: continue
+        if after.mean() > 0.6 * emax and after.mean() > 1.45 * before.mean() + 0.05:
+            drops.append(round(off + a * 0.5, 1))
+            powers.append(round(float(after.mean() / (before.mean() + 0.05)), 2))     # b3: how hard it lands
+            ramp = np.polyfit(np.arange(len(before)), before, 1)[0] if len(before) > 3 else 0
+            onr = np.polyfit(np.arange(len(before)), Fp[max(0, a - 12):a], 1)[0] if len(before) > 3 else 0
+            if ramp > 0 or onr > 0: builds.append([round(off + max(0, a - 12) * 0.5, 1), round(off + a * 0.5, 1)])
+    # --- b4: drops anywhere, judged against the gap just before them (build -> cut -> slam), timed from the onset
+    er = Er / (np.percentile(Er, 95) + 1e-9)
+    cand = []
+    for i in range(6, len(er) - 4):
+        aft = er[i:i + 4].mean(); gp = er[i - 3:i].min(); pre = er[i - 2:i].mean()
+        if aft > 0.6 and aft > 1.6 * gp + 0.05 and er[i:i + 2].mean() > 1.3 * pre + 0.03:
+            cand.append((float(aft / (gp + 0.05)), i))
+    keep = []
+    for sc_, i in sorted(cand, reverse=True):
+        if all(abs(i - j) >= 16 for _, j in keep): keep.append((sc_, i))
+    for sc_, i in keep:
+        f0 = max(0, int((i - 0.5) * step)); f1 = min(len(flux), int((i + 1.5) * step))
+        if f1 > f0:                                                          # the FIRST strong onset, not the loudest
+            w_ = flux[f0:f1]; thr_ = 0.3 * float(w_.max()); lvl_ = float(rms[f0:f0 + int(2.5 * fps)].mean())
+            ok_ = [j for j in range(len(w_)) if w_[j] >= thr_ and w_[j] >= w_[max(0, j - 1):j + 2].max()
+                   and float(rms[min(len(rms) - 1, f0 + j + 1)]) >= 0.4 * lvl_]             # already at the drop's level
+            fi = f0 + (ok_[0] if ok_ else int(np.argmax(w_)))
+        else: fi = int(i * step)
+        t_ = round(off + fi / fps + ONSET_LAG, 2)
+        b0 = en[max(0, i - 12):i]
+        pw = round(max(1.8, float(er[i:i + 8].mean() / (b0.mean() + 0.05))) if len(b0) else 1.8, 2)
+        k_ = next((k for k, d in enumerate(drops) if abs(d - t_) < 4), None)
+        if k_ is not None: drops[k_] = t_; powers[k_] = max(powers[k_], pw)
+        else:
+            drops.append(t_); powers.append(pw)
+            if len(b0) > 3 and np.polyfit(np.arange(len(b0)), b0, 1)[0] > 0: builds.append([round(off + max(0, i - 12) * 0.5, 1), t_])
+    o_ = sorted(range(len(drops)), key=lambda k: drops[k]); drops = [drops[k] for k in o_]; powers = [powers[k] for k in o_]
+    builds = sorted(builds)
+    # --- key: Krumhansl profiles on the mean chroma
+    maj = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
+    mnr = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
+    ch = Cn.mean(axis=0); names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    best = max(((float(np.corrcoef(np.roll(p, r), ch)[0, 1]), names[r], md) for r in range(12) for p, md in ((maj, 'major'), (mnr, 'minor'))))
+    key, mode = f'{best[1]} {best[2]}', best[2]
+    engine = 'numpy'
+    # --- per second energy for the live side
+    sec_e = [round(float(v), 2) for v in pool(en, 2)]
+    sec_e = [0.0] * int(off) + sec_e
+    m = dict(v=1, key=key, mode=mode, title=meta.get('title'), artist=meta.get('artist'), song=meta.get('key'), dur=meta.get('dur'),
+             offset=off, sections=out, chorus_label=chorus, drops=drops, builds=builds, energy=sec_e, engine=engine,
+             studied=time.strftime('%F %T'), brain=VERSION)
+    # --- b3: the drop's own hits (kick / snare, s after the drop), dynamics, cuts, onset density
+    try:
+        lowb = [i for i in range(24) if edges[i + 1] <= 170]
+        share = B[:, lowb].sum(axis=1) / (B.sum(axis=1) + 1e-9)
+        hits = []
+        for d in drops:
+            f0 = int((d - off) * fps); win_ = flux[f0:f0 + int(2.5 * fps)]
+            if len(win_) < 6: hits.append([]); continue
+            thr_ = float(win_.mean() + 0.1 * win_.std()); hs = []
+            for j in range(len(win_)):
+                if win_[j] > thr_ and win_[j] >= win_[max(0, j - 1):j + 2].max():
+                    hs.append([round(j / fps, 2), 'k' if share[f0 + j] > 0.35 else 's'])
+            hits.append(hs[:8])
+        m['drop_power'] = powers; m['drop_hits'] = hits
+        w = int(0.4 * sr); nw = x.size // w
+        st = np.sqrt(np.mean(x[:nw * w].reshape(nw, w) ** 2, axis=1)) + 1e-9
+        loud = np.sort(st)[len(st) // 2:]
+        crest = float(20 * np.log10(np.max(np.abs(x)) + 1e-9) - 20 * np.log10(np.sqrt(np.mean(loud ** 2))))
+        w3 = int(3 * sr); n3 = x.size // w3
+        st3 = 20 * np.log10(np.sqrt(np.mean(x[:n3 * w3].reshape(n3, w3) ** 2, axis=1)) + 1e-9)
+        st3 = st3[st3 > st3.max() - 30] if n3 else st3
+        lra = float(np.percentile(st3, 95) - np.percentile(st3, 10)) if len(st3) > 3 else 0.0
+        m['dyn'] = dict(crest=round(crest, 1), lra=round(lra, 1), crush=round(float(np.clip((13 - crest) / 6, 0, 1)), 2))
+        jumps = [float(ejump[b]) for b in bnd[1:-1] if b < len(ejump)]
+        m['cuts'] = round(sum(1 for j in jumps if j > 0.35) / len(jumps), 2) if jumps else 0.0
+        fl = flux; pk = [j for j in range(1, len(fl) - 1) if fl[j] > fl[j - 1] and fl[j] >= fl[j + 1] and fl[j] > 1.5 * np.median(fl)]
+        m['onsets'] = round(len(pk) / (len(fl) / fps), 2)
+    except Exception as e:
+        m['b3_error'] = repr(e)[:200]; log(f'b3: {e!r}')
+    # --- Essentia: better key + mood, dance, voice, style (if the models are there)
+    try:
+        ess = essentia_study(x, sr)
+        if ess:
+            m.update(ess); m['engine'] = 'essentia'
+            cv = m.pop('curves', None); hop = m.pop('curve_hop', 1.0); mid = m.pop('curve_mid', 1.0)
+            for name, vals in (cv or {}).items():                              # b2: per section, from the frames inside it
+                for s in m['sections']:
+                    inside = [v for i, v in enumerate(vals) if s['t0'] <= off + i * hop + mid < s['t1']]
+                    if inside: s[name] = round(sum(inside) / len(inside), 2)
+    except Exception as e:
+        m['essentia_error'] = repr(e)[:200]; log(f'essentia: {e!r}')
+    m['grit'], m['delicacy'] = grit(m)                                     # b3: logged only; v32 compares against Death Grips maps
+    return m
+
+
+def grit(m):
+    """b3: the ДЕЛИКАТЕС features (shouted voice, aggression inside the voice, crushed master, dense hits, hard cuts) and a
+    first 0-1 score. v31 only logs it; v32 replaces the weights with the distance to shum's own Death Grips maps."""
+    secs = m.get('sections') or []; tot = sum(s['t1'] - s['t0'] for s in secs) or 1
+    vf = sum(s['t1'] - s['t0'] for s in secs if (s.get('voice') or 0) >= 0.6) / tot
+    av = [s.get('aggressive') for s in secs if (s.get('voice') or 0) >= 0.5 and s.get('aggressive') is not None]
+    f = dict(aggr=(m.get('mood') or {}).get('aggressive'), aggr_voice=round(sum(av) / len(av), 2) if av else None,
+             crush=(m.get('dyn') or {}).get('crush'), dens=m.get('onsets'), cuts=m.get('cuts'), voice=round(vf, 2))
+    w = dict(aggr=0.25, aggr_voice=0.2, crush=0.2, dens=0.15, cuts=0.1, voice=0.1)
+    sc = sw = 0.0
+    for k_, wk in w.items():
+        v = f.get(k_)
+        if v is None: continue
+        if k_ == 'dens': v = min(1.0, v / 6.0)
+        sc += wk * v; sw += wk
+    return f, (round(sc / sw, 2) if sw else None)
+
+
+def essentia_study(x, sr):
+    import numpy as np
+    try:
+        import essentia; essentia.log.infoActive = False; essentia.log.warningActive = False
+        import essentia.standard as es
+    except ImportError: return None
+    out = {}
+    k, sc, strength = es.KeyExtractor(profileType='krumhansl', sampleRate=sr)(x.astype(np.float32))
+    out['key'] = f'{k} {sc}'; out['mode'] = sc; out['key_strength'] = round(float(strength), 2)
+    emb_path = f'{MODELS}/discogs-effnet-bs64-1.pb'
+    if not os.path.exists(emb_path): return out
+    x16 = es.Resample(inputSampleRate=sr, outputSampleRate=16000)(x.astype(np.float32))
+    emb = es.TensorflowPredictEffnetDiscogs(graphFilename=emb_path, output='PartitionedCall:1')(x16)
+    mood = {}; curves = {}                                                   # b2: one value per embedding (~1 s hop, 2 s patch)
+    for h in HEADS:
+        pb, js = f'{MODELS}/{h}-discogs-effnet-1.pb', f'{MODELS}/{h}-discogs-effnet-1.json'
+        if not (os.path.exists(pb) and os.path.exists(js)): continue
+        cls = json.load(open(js)).get('classes') or []
+        P = es.TensorflowPredict2D(graphFilename=pb, output='model/Softmax')(emb); pr = P.mean(axis=0)
+        name = {'mood_happy': 'happy', 'mood_sad': 'sad', 'mood_aggressive': 'aggressive', 'mood_relaxed': 'relaxed', 'mood_party': 'party',
+                'danceability': 'danceable', 'voice_instrumental': 'voice'}[h]
+        pos = name if name in cls else ('danceable' if name == 'danceable' else 'voice' if name == 'voice' else None)
+        if pos in cls:
+            mood[name] = round(float(pr[cls.index(pos)]), 2)
+            if name in ('voice', 'aggressive'): curves[name] = [round(float(v), 2) for v in P[:, cls.index(pos)]]
+    if mood: out['mood'] = mood
+    if curves: out['curves'] = curves; out['curve_hop'] = 62 * 256 / 16000.0; out['curve_mid'] = 64 * 256 / 16000.0
+    pb, js = f'{MODELS}/{GENRE}-discogs-effnet-1.pb', f'{MODELS}/{GENRE}-discogs-effnet-1.json'
+    if os.path.exists(pb) and os.path.exists(js):
+        cls = json.load(open(js)).get('classes') or []
+        pr = es.TensorflowPredict2D(graphFilename=pb, input='serving_default_model_Placeholder', output='PartitionedCall:0')(emb).mean(axis=0)
+        top = np.argsort(-pr)[:3]
+        out['genre'] = [[cls[i].replace('---', ' / '), round(float(pr[i]), 2)] for i in top if i < len(cls)]
+    return out
+
+
+# ============================================================ setup, weights, CLI
+def setup():
+    import shutil, urllib.request
+    os.makedirs(DIR, exist_ok=True)
+    if not env_python():
+        print('creating the analysis env (python venv) …')
+        r = subprocess.run([sys.executable, '-m', 'venv', ENV])
+        if r.returncode != 0 or not env_python():
+            shutil.rmtree(ENV, ignore_errors=True)
+            print('could not create a venv: run  sudo apt install python3-venv  and then  zarya-brain setup  again'); return 1
+    pip = [f'{ENV}/bin/python3', '-m', 'pip', 'install', '-q', '--disable-pip-version-check']
+    print('installing numpy + essentia-tensorflow (~700 MB, a few minutes) …')
+    if subprocess.run(pip + ['numpy==2.5.4', 'essentia-tensorflow==2.1b6.dev1389']).returncode != 0:
+        print('pip failed: the song map still works without the models if numpy installed'); subprocess.run(pip + ['numpy'])
+    os.makedirs(MODELS, exist_ok=True)
+    want = [(f'{MODEL_BASE}/{EMBED[0]}', f'{MODELS}/discogs-effnet-bs64-1.pb')]
+    for h in HEADS + [GENRE]:
+        for ext in ('pb', 'json'):
+            want.append((f'{MODEL_BASE}/classification-heads/{h}/{h}-discogs-effnet-1.{ext}', f'{MODELS}/{h}-discogs-effnet-1.{ext}'))
+    for url, dst in want:
+        if os.path.exists(dst) and os.path.getsize(dst) > 0: continue
+        try:
+            urllib.request.urlretrieve(url, dst + '.part'); os.replace(dst + '.part', dst); print('  ✓', os.path.basename(dst))
+        except Exception as e: print('  ✗', os.path.basename(dst), e)
+    return doctor()
+
+
+def doctor():
+    ok = True
+    py = env_python(); print(('ОК ' if py else 'НЕТ') + f' analysis env {ENV}'); ok &= bool(py)
+    if py:
+        r = subprocess.run([py, '-c', 'import numpy; print(numpy.__version__)'], capture_output=True, text=True)
+        print(('ОК ' if r.returncode == 0 else 'НЕТ') + f' numpy {r.stdout.strip()}'); ok &= r.returncode == 0
+        r = subprocess.run([py, '-c', 'import essentia.standard'], capture_output=True, text=True, env=dict(os.environ, TF_CPP_MIN_LOG_LEVEL='3', CUDA_VISIBLE_DEVICES='-1'))
+        print(('ОК ' if r.returncode == 0 else '·· ') + ' essentia ' + ('ok' if r.returncode == 0 else '(missing: map works, no mood / style)'))
+    n = len(glob.glob(f'{MODELS}/*.pb')); print(('ОК ' if n >= 9 else '·· ') + f' models {n}/9')
+    pr = subprocess.run(['sh', '-c', 'command -v parec'], capture_output=True); print(('ОК ' if pr.returncode == 0 else 'НЕТ') + ' parec (pulseaudio-utils)'); ok &= pr.returncode == 0
+    print(f'   maps: {len(glob.glob(f"{MAPS}/*.json"))} songs studied · weights: {"yes" if os.path.exists(WEIGHTS) else "no (zarya-brain weights)"}')
+    return 0 if ok else 1
+
+
+def weights():
+    src = f'{HOME}/.local/share/zarya/listening/spotify.jsonl'
+    if not os.path.exists(src): print('no Spotify history: zarya-journal import <zip>'); return 1
+    W = {}
+    for ln in open(src, encoding='utf-8'):
+        try: r = json.loads(ln)
+        except ValueError: continue
+        k = song_key(r.get('artist'), r.get('title')); w = W.setdefault(k, [0, 0])
+        if r.get('outcome') == 'skip': w[1] += 1
+        elif (r.get('heard') or 0) >= 30: w[0] += 1
+    W = {k: v for k, v in W.items() if sum(v) >= 5}
+    os.makedirs(DIR, exist_ok=True)
+    with open(WEIGHTS + '.tmp', 'w', encoding='utf-8') as f: json.dump(W, f, ensure_ascii=False)
+    os.replace(WEIGHTS + '.tmp', WEIGHTS)
+    fav = sum(1 for v in W.values() if v[0] >= 100); sk = sum(1 for v in W.values() if sum(v) >= 10 and v[1] > 1.5 * v[0])
+    print(f'weights: {len(W)} songs · {fav} favourites (100+ plays) · {sk} you mostly skip'); return 0
+
+
+def fmt_t(s): s = int(s or 0); return f'{s // 60}:{s % 60:02d}'
+
+
+def print_map(m, pos=None):
+    print(f"{m.get('artist')} - {m.get('title')}  ·  key {m.get('key')}  ·  studied {m.get('studied')} ({m.get('engine')})")
+    if m.get('mood'): print('mood: ' + ' · '.join(f'{k} {v:.2f}' for k, v in m['mood'].items()))
+    if m.get('genre'): print('style: ' + ', '.join(f'{n} {p:.2f}' for n, p in m['genre']))
+    for s in m.get('sections') or []:
+        here = ' ◀ now' if pos is not None and s['t0'] <= pos < s['t1'] else ''
+        extra = (f" · voice {s['voice']:.2f}" if 'voice' in s else '') + (f" · aggr {s['aggressive']:.2f}" if 'aggressive' in s else '')
+        print(f"  {fmt_t(s['t0'])}-{fmt_t(s['t1'])}  {s['label']}  {SECTION_RU.get(s['kind'], s['kind']):<10} energy {s['energy']:.2f}{extra}{here}")
+    if m.get('drops'): print('drops: ' + ', '.join(fmt_t(d) + (f" ×{p:.1f}" if p is not None else '') for d, p in zip(m['drops'], (m.get('drop_power') or []) + [None] * len(m['drops']))))
+    if m.get('dyn'): print(f"dynamics: crest {m['dyn']['crest']} dB · range {m['dyn']['lra']} dB · crushed {m['dyn']['crush']:.2f}  ·  cuts {m.get('cuts')}  ·  hits/s {m.get('onsets')}")
+    if m.get('delicacy') is not None: print(f"ДЕЛИКАТЕС {m['delicacy']:.2f}  {m.get('grit')}")
+    if m.get('builds'): print('builds: ' + ', '.join(f'{fmt_t(a)}-{fmt_t(b)}' for a, b in m['builds']))
+
+
+def find(text):
+    q = norm(text); out = []
+    for p in glob.glob(f'{MAPS}/*.json'):
+        try: m = json.load(open(p, encoding='utf-8'))
+        except (OSError, ValueError): continue
+        if q in norm(f"{m.get('artist')} {m.get('title')}"): out.append((p, m))
+    return out
+
+
+def cli():
+    a = sys.argv[1:]; cmd = a[0] if a else 'now'
+    if cmd in ('-h', '--help', 'help'): print(open(__file__).read().split('\nimport ', 1)[0].replace('# ', '')); return 0
+    if cmd == '--version': print(VERSION); return 0
+    if cmd == 'analyze': analyze(a[1], a[2]); return 0
+    if cmd == 'ears': ears_only(a[1], a[2]); return 0                         # b6
+    if cmd == 'setup': return setup()
+    if cmd == 'doctor': return doctor()
+    if cmd == 'weights': return weights()
+    if cmd == 'list':
+        ms = sorted((m for _, m in find('')), key=lambda m: m.get('studied') or '')
+        for m in ms: print(f"{m.get('studied', '')[:16]}  {m.get('artist')} - {m.get('title')}  ({len(m.get('sections') or [])} sections, {len(m.get('drops') or [])} drops, {m.get('engine')})")
+        print(f'{len(ms)} songs studied'); return 0
+    if cmd in ('show', 'forget'):
+        hits = find(' '.join(a[1:]))
+        if not hits: print('no studied song matches'); return 1
+        for p, m in hits[:5]:
+            if cmd == 'show': print_map(m); print()
+            else: os.remove(p); print(f"forgot {m.get('artist')} - {m.get('title')}")
+        return 0
+    if cmd == 'grit':                                                           # b3
+        ms = [m for _, m in find('')]
+        old = [m for m in ms if m.get('delicacy') is None]
+        for m in sorted((m for m in ms if m.get('delicacy') is not None), key=lambda m: -m['delicacy']):
+            g = m.get('grit') or {}
+            print(f"{m['delicacy']:.2f}  {m.get('artist')} - {m.get('title')}  ·  " + ' '.join(f'{k} {v}' for k, v in g.items()))
+        if old: print(f'{len(old)} older maps have no score: right-click > This song… > Study it again (or zarya-brain forget TEXT)')
+        return 0
+    if cmd == 'study':
+        py = env_python()
+        if not py: print('run zarya-brain setup first'); return 1
+        if os.path.realpath(sys.executable) != os.path.realpath(py):
+            return subprocess.run([py, '-I', os.path.abspath(__file__)] + a, env=dict(os.environ, TF_CPP_MIN_LOG_LEVEL='3', CUDA_VISIBLE_DEVICES='-1')).returncode
+        import essentia.standard as es
+        x = es.MonoLoader(filename=a[1], sampleRate=SR)()
+        m = study(x, SR, dict(artist='file', title=os.path.basename(a[1]), key='file|' + a[1], dur=len(x) / SR)); print_map(m); return 0
+    if cmd == 'now':
+        try: mj = json.load(open(f'{HOME}/.cache/zarya-daemon/music.json', encoding='utf-8'))
+        except (OSError, ValueError): mj = {}
+        art = (mj.get('artists') or [mj.get('artist')])[0] if (mj.get('artists') or mj.get('artist')) else None
+        if not art or not mj.get('title'): print('nothing playing (or ДЕМОН not running)'); return 1
+        m = load_map(song_key(art, mj['title']))
+        if not m: print(f"{art} - {mj['title']}: not studied yet (he studies a song the first time it plays through, without pauses or seeks)"); return 1
+        print_map(m, mj.get('position')); return 0
+    print('commands: now · list · show TEXT · grit · study FILE · forget TEXT · weights · setup · doctor'); return 1
+
+
+if __name__ == '__main__':
+    sys.exit(cli())

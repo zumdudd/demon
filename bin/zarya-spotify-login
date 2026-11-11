@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA (Mint guest d5) :: connect ДЕМОН to the Spotify Web API: the song that plays next, full credits (feat. artists), ♥ like.
+# d5 adds the library scope for ♥ like: run it once more if you connected before mint-pack v12.
+# One time. Spotify needs a developer app owned by a Premium account (Spotify rule since 2026-02).
+#   1. https://developer.spotify.com/dashboard → Create app
+#      Redirect URI: http://127.0.0.1:8899/callback   ·   API: Web API
+#   2. Copy the app's Client ID, then run: zarya-spotify-login <CLIENT_ID>
+# Uses Authorization Code + PKCE (no client secret). Token saved to ~/.config/zarya/spotify-token.json (0600).
+# Undo: delete that file (or Spotify → Settings → Apps → remove access).
+import base64, hashlib, http.server, json, os, secrets, subprocess, sys, time, urllib.parse, urllib.request
+
+PORT = 8899
+REDIRECT = f'http://127.0.0.1:{PORT}/callback'
+SCOPES = 'user-read-currently-playing user-read-playback-state user-library-modify user-library-read'
+TOKEN = os.path.expanduser('~/.config/zarya/spotify-token.json')
+ACCOUNTS = os.environ.get('ZARYA_SPOTIFY_ACCOUNTS', 'https://accounts.spotify.com')
+V, G, M, N = '\033[38;2;123;77;255m', '\033[38;2;143;217;168m', '\033[38;2;150;143;166m', '\033[0m'
+
+
+def main():
+    cid = sys.argv[1] if len(sys.argv) > 1 else ''
+    if not cid:
+        print(f'{V}▌ ДЕМОН ⇢ SPOTIFY{N}  next song, full credits, ♥ like\n')
+        old = {}
+        try: old = json.load(open(TOKEN))
+        except (OSError, ValueError): pass
+        if old.get('client_id'):
+            print(f'  already connected once (Client ID {old["client_id"][:6]}…). Press Enter to reuse it.\n')
+        print(f'  1. open {G}https://developer.spotify.com/dashboard{N} → Create app')
+        print(f'     Redirect URI: {G}{REDIRECT}{N}   API: Web API   (the account must be Premium)')
+        print('  2. paste the Client ID here\n')
+        cid = input(f'{V}›{N} Client ID: ').strip() or old.get('client_id', '')
+    if not (cid and cid.isalnum()):
+        print('no valid Client ID, nothing changed'); return 1
+    verifier = secrets.token_urlsafe(64)[:96]
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b'=').decode()
+    state = secrets.token_urlsafe(16)
+    url = ACCOUNTS + '/authorize?' + urllib.parse.urlencode(dict(
+        client_id=cid, response_type='code', redirect_uri=REDIRECT, scope=SCOPES, state=state,
+        code_challenge_method='S256', code_challenge=challenge))
+    got = {}
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            got.update({k: v[0] for k, v in q.items()})
+            ok = 'code' in got and got.get('state') == state
+            self.send_response(200); self.send_header('Content-Type', 'text/html; charset=utf-8'); self.end_headers()
+            msg = 'ДЕМОН is connected. You can close this tab.' if ok else f'Spotify said: {got.get("error", "no code")}'
+            self.wfile.write(f'<body style="background:#07060D;color:#E4E0EA;font:16px monospace;padding:40px">▌ {msg}</body>'.encode())
+        def log_message(self, *a): pass
+
+    srv = http.server.HTTPServer(('127.0.0.1', PORT), H)
+    srv.timeout = 300
+    print(f'\n  opening the browser… if it does not open, visit:\n  {M}{url}{N}\n')
+    subprocess.Popen(['xdg-open', url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    srv.handle_request()
+    if 'code' not in got or got.get('state') != state:
+        print(f'not connected ({got.get("error", "timed out or wrong state")})'); return 1
+    data = urllib.parse.urlencode(dict(grant_type='authorization_code', code=got['code'], redirect_uri=REDIRECT,
+                                       client_id=cid, code_verifier=verifier)).encode()
+    req = urllib.request.Request(ACCOUNTS + '/api/token', data=data, headers={'Content-Type': 'application/x-www-form-urlencoded'})
+    r = json.load(urllib.request.urlopen(req, timeout=15))
+    tok = dict(client_id=cid, access_token=r['access_token'], refresh_token=r['refresh_token'],
+               expires=time.time() + int(r.get('expires_in', 3600)), scope=r.get('scope') or SCOPES)
+    os.makedirs(os.path.dirname(TOKEN), exist_ok=True)
+    fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as f: json.dump(tok, f)
+    print(f'{G}▌ connected.{N} ДЕМОН now shows "NEXT ▸", full credits and can ♥ like (Super+Alt+L or right-click). Token: {TOKEN}')
+    return 0
+
+
+if __name__ == '__main__':
+    try: sys.exit(main())
+    except KeyboardInterrupt: print()

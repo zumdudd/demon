@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA ⇢ SLMAEVE :: ДЕМОН music modes (m5, mint-pack v16; m4 v15, m3 v14, m2 v12). Module for zarya-daemon-desk + a small CLI.
+#   zarya-music                 what is playing, which mode + weather, and why (read from the desktop ДЕМОН)
+#   zarya-music tags            what the lookups found for this song: Last.fm tags, credits, lyrics mood
+#   zarya-music teach MODE      the current artist always gets MODE        (artist rule)
+#   zarya-music song MODE       only this song gets MODE                    (song rule)
+#   zarya-music feel WEATHER    this song feels rain | clear | storm | dawn | auto
+#   zarya-music forget          drop the taught rule for the current artist
+#   zarya-music try MODE [S]    force MODE for S seconds (default 30) to preview it
+#   zarya-music listen [S]      print what the ear hears every second (tuning)
+#   zarya-music rules           show the rules files
+#   zarya-music show ascend     preview a whole-screen event (m4; m5: show descend; m6: show nails | hand; m7: shadow | form | unform)
+#   zarya-music possess [summon|cult|pagan|none]   preview ОДЕРЖИМОСТЬ while a song plays (m5)
+#   zarya-music peak possess|stand|rift|auto [--artist]   the big moment for this song (or every song by this artist) (m11)
+#   zarya-music show            list the animations you can preview (m11)
+#   zarya-music ctl play|next|prev|vol+|vol-|like|stop-in MIN|stop-cancel   (global shortcuts call these)
+# Modes: break (liquid / jungle) · memory · nod (loose) · mosh · kendrick · grips · groove · epic · kawaii
+# Two layers: the BODY moves with the sound (mode, per section); the WEATHER is the mood (rain, clear, storm, dawn).
+# Mood sources, in order: your song teaching > rules > Last.fm tags (~/.config/zarya/lastfm.key) > synced lyrics (LRCLIB).
+# The ear: cava 0.7.x raw output (16 bars, 60 fps) from the default output's monitor; runs only while music plays.
+import os as _zos
+# v35: the code lives in ~/.local/lib/zarya/music/ (parts run in order, one namespace, behaviour unchanged).
+# Map of the parts: ~/.local/lib/zarya/INDEX.md · history: ~/shum/demon/CHANGELOG.md
+_zP = _zos.path.join(_zos.path.expanduser('~'), '.local', 'lib', 'zarya', 'music')
+for _zf in sorted(_n for _n in _zos.listdir(_zP) if _n.endswith('.py')):
+    with open(_zos.path.join(_zP, _zf), encoding='utf-8') as _zh:
+        exec(compile(_zh.read(), _zos.path.join(_zP, _zf), 'exec'), globals())

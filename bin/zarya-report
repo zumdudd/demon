@@ -1,0 +1,264 @@
+#!/usr/bin/env python3
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZARYA ⇢ SLMAEVE :: zarya-report r3 (mint-pack v38; r2 v37, r1 v14). Reads the reports saved from right-click ДЕМОН > Report…,
+# the bus (what ДЕМОН did and skipped, per song) and the felt-wrong / felt-right stamps.
+#   zarya-report                 last 15 reports (newest last)
+#   zarya-report list [N]        last N (all: 0)
+#   zarya-report show [ID|#N]    one report in full (default: the newest): what you wrote + what he was doing
+#   zarya-report export          everything into ~/Downloads/demon-reports-<date-time>.tar.gz (attach that in the chat)
+#   zarya-report path            where they live
+#   zarya-report digest [DAY]    per song: what fired at which second, what was held back and why, your stamps
+#                                DAY = today (default), yesterday or YYYYmmdd; --all adds every bus line
+#   zarya-report feel wrong      stamp this moment as felt wrong (Super+Alt+F): song, second, last 10 s of events, one word
+#   zarya-report feel right      stamp it as felt right (Super+Alt+G)
+#   zarya-report feel list       the stamps
+# Files: ~/.local/share/zarya/reports/<YYYYmmdd-HHMMSS>.json + index.log; stamps ~/.local/share/zarya/feedback/*.json;
+# bus ~/.cache/zarya/bus-YYYYmmdd.jsonl (written by ДЕМОН d28+). Uninstalling mint-pack never deletes them.
+import os, sys, json, glob, time, tarfile
+
+VERSION = 'r3'
+DIR = os.path.expanduser('~/.local/share/zarya/reports')
+FEEL = os.path.expanduser('~/.local/share/zarya/feedback')
+BUS = os.path.expanduser('~/.cache/zarya')
+V, D, B, G, P = '\033[38;2;157;123;255m', '\033[38;2;110;103;135m', '\033[1m', '\033[38;2;143;217;168m', '\033[0m'
+KIND = dict(mode='WRONG MODE', mood='WRONG MOOD', glitch='GLITCH', afk='FROZE / AFK', way='IN THE WAY', other='OTHER')
+
+
+def load_all():
+    out = []
+    for f in sorted(glob.glob(f'{DIR}/*.json')):
+        try:
+            with open(f, encoding='utf-8') as h: out.append(json.load(h))
+        except (OSError, ValueError) as e: print(f'{D}skip {os.path.basename(f)}: {e}{P}', file=sys.stderr)
+    return out
+
+
+def line(r):
+    now = r.get('now') or {}
+    song = f"{now.get('title') or '-'} · {', '.join(now.get('artists') or []) or '-'}" if now.get('title') else 'no music'
+    mode = (now.get('mode') or '-') + (':' + now['variant'] if now.get('variant') else '')
+    txt = (r.get('text') or '').replace('\n', ' ')
+    return f"{V}#{r.get('n', '?'):<3}{P} {D}{r.get('time', '')}{P}  {B}{KIND.get(r.get('kind'), r.get('kind'))}{P}  {song}  {D}[{mode}]{P}\n     {txt[:150] or D + '(no description)' + P}"
+
+
+def show(r):
+    now, w, ear = r.get('now') or {}, r.get('window') or {}, r.get('ear') or {}
+    print(f"{V}{B}ОТЧЁТ #{r.get('n')}{P}  {r.get('id')}  {D}{r.get('time')} · ДЕМОН {r.get('version')} / music {r.get('music_version')}{P}")
+    print(f"{B}{KIND.get(r.get('kind'), r.get('kind'))}{P}\n  {r.get('text') or '(no description)'}\n")
+    print(f"{V}SONG{P}    {now.get('title')} · {', '.join(now.get('artists') or [])}  [{now.get('album') or ''}]  via {now.get('player')}, playing={now.get('playing')}, pos={now.get('position')}")
+    wx = now.get('weather') or ['', '']
+    print(f"{V}MODE{P}    {now.get('mode')}{':' + now['variant'] if now.get('variant') else ''}  because {now.get('why')}   weather {wx[0] or '-'} because {wx[1] if len(wx) > 1 else '-'}   talk={now.get('talk')}")
+    print(f"{V}EAR{P}     on={r.get('ear_on')} fps={r.get('ear_fps')} err={r.get('ear_err')}  bpm={ear.get('bpm')} level={ear.get('level')} beat={ear.get('beat')} excite={ear.get('excite')} section={ear.get('section')} max_hold={ear.get('max_hold')}")
+    print(f"{V}WINDOW{P}  " + '  '.join(f'{k}={v}' for k, v in w.items() if k != 'active'))
+    if w.get('active'): print(f"        active: {w['active'][-160:]}")
+    lg = r.get('log') or []
+    print(f"\n{V}LOG{P} (last {min(25, len(lg))} of {len(lg)} saved lines)")
+    for l in lg[-25:]: print(f'  {D}{l}{P}')
+
+
+# >>> r2 digest + feel (mint-pack v37)
+RU = dict(fire='ОГОНЬ', blown='СДУЛО', goose='МУРАШКИ', frame='КАДР', tear='СЛЕЗА', spark='ИСКРЫ', back='ОБИДА', reactions='РЕАКЦИИ')
+WORDS = [('much', 'СЛИШКОМ', 'too much'), ('little', 'МАЛО', 'too little'), ('moment', 'НЕ ТОГДА', 'wrong moment'), ('mood', 'НЕ ТО', 'wrong mood')]
+SHOW = ('react', 'hurt', 'screen', 'skip', 'peak', 'classes', 'feel')
+NOISE = ('hurt: nervous', 'hurt: hunger', 'hurt: ПОДМЕНЫШ song: ')
+
+
+def day_of(arg):
+    if arg in (None, '', 'today'): return time.strftime('%Y%m%d')
+    if arg == 'yesterday': return time.strftime('%Y%m%d', time.localtime(time.time() - 86400))
+    if len(arg) == 8 and arg.isdigit(): return arg
+    sys.exit(f'day must be today, yesterday or YYYYmmdd (got {arg})')
+
+
+def bus_read(day):
+    out = []
+    try:
+        with open(f'{BUS}/bus-{day}.jsonl', encoding='utf-8') as f:
+            for ln in f:
+                try: out.append(json.loads(ln))
+                except ValueError: pass
+    except OSError: pass
+    return out
+
+
+def mmss(s): return '  -  ' if s is None else f'{int(s) // 60}:{int(s) % 60:02d}'
+
+
+def what(r):
+    """one short line for a bus record (None = leave it out of the digest)."""
+    k = r.get('kind'); m = r.get('msg') or ''
+    if k == 'skip': return f"{D}✕ {RU.get(r.get('name'), r.get('name'))}: {r.get('why')}{P}"
+    if k == 'feel':
+        mk = f"{G}◆ FELT RIGHT{P}" if r.get('verdict') == 'right' else f"\033[38;2;255;34;68m◆ FELT WRONG{P}"
+        return mk + (f"  {B}{r.get('word')}{P}" if r.get('word') else '')
+    if k == 'react':
+        m = m[len('react: '):] if m.startswith('react: ') else m
+        w, _, why = m.partition(' (')
+        return f"{V}{RU.get(w, w)}{P}" + (f"  {D}({why}{P}" if why else '')
+    if any(m.startswith(n) for n in NOISE): return None
+    if k == 'peak' and 'charge 0.00' in m: return None                     # r3: empty drop flags at track start
+    for pre in ('hurt: ', 'screen: ', 'classes: '):
+        if m.startswith(pre): m = m[len(pre):]
+    return m[:110]
+
+
+def digest(a):
+    full = '--all' in a; a = [x for x in a if x != '--all']
+    day = day_of(a[0] if a else None); recs = bus_read(day)
+    if not recs: print(f'{D}no bus for {day} (ДЕМОН d28+ writes ~/.cache/zarya/bus-YYYYmmdd.jsonl){P}'); return
+    songs = []; cur = None
+    for r in recs:
+        if r.get('kind') == 'song_start':
+            if cur and cur['head'].get('song') == r.get('song') and 'mode' not in cur['head']:     # r3: a line came just before it
+                cur['head'] = dict(r, at=cur['head'].get('at') or r.get('at')); continue
+            cur = dict(head=r, rows=[]); songs.append(cur); continue
+        if r.get('kind') == 'song_end': cur = None; continue
+        if r.get('song') and (cur is None or r['song'] != cur['head'].get('song')):       # joined mid-song (ДЕМОН restarted)
+            cur = dict(head=dict(song=r['song'], at=r.get('at')), rows=[]); songs.append(cur)
+        if cur is None:
+            if not full: continue
+            cur = dict(head=dict(song='(no song)', at=r.get('at')), rows=[]); songs.append(cur)
+        if full or r.get('kind') in SHOW:
+            w = what(r) if not full else (what(r) or r.get('msg') or r.get('kind'))
+            if w: cur['rows'].append((r.get('sec'), w))
+    n_f = n_s = 0
+    print(f"{V}{B}ДАЙДЖЕСТ · digest{P}  {D}{day[:4]}-{day[4:6]}-{day[6:]} · {len(songs)} song(s){P}")
+    for s in songs:
+        h = s['head']; tags = []
+        if h.get('mode'): tags.append(h['mode'])
+        if h.get('weather'): tags.append(h['weather'])
+        for k, lab in (('deli', 'ДЕЛИКАТЕС'), ('lure_mark', 'ПРИМАНКА'), ('epic', 'ЭПОС'), ('changeling', 'ПОДМЕНЫШ in him')):
+            if h.get(k): tags.append(lab)
+        if h.get('weight') not in (None, 1, 1.0): tags.append(f"weight {h['weight']:g}")
+        quiet = not s['rows']
+        if quiet and not full: continue
+        print(f"\n{D}{h.get('at', '')[:5]}{P}  {B}{h.get('song', '?')}{P}  {D}[{' · '.join(tags) or '-'}]{P}")
+        for sec, w in s['rows']:
+            print(f"   {D}{mmss(sec):>5}{P}  {w}")
+            n_s += w.startswith(D + '✕'); n_f += '◆' in w
+    q = sum(1 for s in songs if not s['rows'])
+    print(f"\n{D}{q} song(s) with nothing to show left out · {n_s} held back · {n_f} stamp(s) · zarya-report digest --all for every line{P}")
+
+
+def bus_now():
+    """(song, second) right now from the bus: the last line that names a song, moved on by the time since."""
+    recs = bus_read(time.strftime('%Y%m%d'))
+    for r in reversed(recs):
+        if r.get('kind') == 'song_end': return None, None
+        if r.get('song'):
+            sec = r.get('sec')
+            return r['song'], (round(sec + time.time() - r['t'], 1) if sec is not None else None)
+    return None, None
+
+
+def bus_emit(rec):
+    os.makedirs(BUS, exist_ok=True)
+    now = time.time(); rec = dict(t=round(now, 2), at=time.strftime('%T'), **rec)
+    with open(f"{BUS}/bus-{time.strftime('%Y%m%d')}.jsonl", 'a', encoding='utf-8') as f: f.write(json.dumps(rec, ensure_ascii=False) + '\n')
+
+
+def ask_word(verdict, song):
+    """small window in ДЕМОН's colours: four words for felt-wrong (Esc / 12 s = none); felt-right just shows ЗАПИСАНО."""
+    try:
+        import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk, Gdk, GLib
+    except Exception: return None
+    css = Gtk.CssProvider(); css.load_from_data(b'''window.zfeel { background-color: #07060D; border: 1px solid #7B4DFF; }
+        window.zfeel label { color: #C9C3D6; font-family: "JetBrainsMono Nerd Font", monospace; }
+        window.zfeel .t { color: #E4E0EA; font-weight: bold; letter-spacing: 3px; font-size: 13pt; }
+        window.zfeel .d { color: #8A8499; font-size: 9pt; }
+        window.zfeel button { background-image: none; background-color: #0C0A14; border: 1px solid #3A3450; border-radius: 0; box-shadow: none; padding: 6px 12px; }
+        window.zfeel button:hover, window.zfeel button:focus { border-color: #7B4DFF; background-color: rgba(123,77,255,0.28); }''')
+    Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    w = Gtk.Window(type=Gtk.WindowType.TOPLEVEL); w.get_style_context().add_class('zfeel')
+    w.set_decorated(False); w.set_keep_above(True); w.set_position(Gtk.WindowPosition.CENTER); w.set_type_hint(Gdk.WindowTypeHint.DIALOG)
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); box.set_margin_start(18); box.set_margin_end(18); box.set_margin_top(14); box.set_margin_bottom(14)
+    w.add(box); res = {'w': None, 'done': False}
+    def quit_(*_):
+        if not res['done']: res['done'] = True; Gtk.main_quit()
+        return False
+    def lab(t, c):
+        l = Gtk.Label(); l.set_markup(t); l.get_style_context().add_class(c); l.set_xalign(0); box.pack_start(l, False, False, 0)
+    if verdict == 'right':
+        lab('ЗАПИСАНО  <span foreground="#8A8499" weight="normal">noted: felt right</span>', 't')
+        lab(GLib.markup_escape_text(song or 'no song'), 'd'); GLib.timeout_add(1400, quit_)
+    else:
+        lab('ЧТО НЕ ТАК?  <span foreground="#8A8499" weight="normal">what felt wrong?</span>', 't')
+        lab(GLib.markup_escape_text(song or 'no song') + '  ·  1-4 or click · Esc = no word', 'd')
+        row = Gtk.Box(spacing=6); box.pack_start(row, False, False, 4)
+        for i, (k, ru, en) in enumerate(WORDS):
+            b = Gtk.Button(); l = Gtk.Label(); l.set_markup(f'{ru}  <span foreground="#8A8499">{en}</span>'); b.add(l)
+            b.connect('clicked', lambda _b, k=k: (res.update(w=k), quit_())); row.pack_start(b, False, False, 0)
+        def key(_w, ev):
+            name = Gdk.keyval_name(ev.keyval)
+            if name == 'Escape': quit_()
+            elif name in ('1', '2', '3', '4'): res['w'] = WORDS[int(name) - 1][0]; quit_()
+        w.connect('key-press-event', key); GLib.timeout_add(12000, quit_)
+    w.connect('delete-event', quit_); w.show_all(); w.present()
+    Gtk.main(); w.destroy()
+    return res['w']
+
+
+def feel(a):
+    sub = a[0] if a else 'list'
+    if sub == 'list':
+        fs = sorted(glob.glob(f'{FEEL}/*.json'))
+        if not fs: print(f'{D}no stamps yet: Super+Alt+F (felt wrong) / Super+Alt+G (felt right){P}'); return
+        for f in fs[-30:]:
+            try: r = json.load(open(f, encoding='utf-8'))
+            except (OSError, ValueError): continue
+            print(f"{D}{r.get('time')}{P}  {'FELT RIGHT' if r['verdict'] == 'right' else 'FELT WRONG'}  {B}{r.get('word') or ''}{P}  {r.get('song') or '-'} @ {mmss(r.get('sec'))}  {D}({len(r.get('events') or [])} events){P}")
+        return
+    if sub not in ('wrong', 'right'): sys.exit('zarya-report feel wrong | right | list')
+    now = time.time(); song, sec = bus_now()
+    ev = [r for r in bus_read(time.strftime('%Y%m%d')) if now - r.get('t', 0) <= 10 and r.get('kind') not in ('feel',)]
+    os.makedirs(FEEL, exist_ok=True)
+    rid = time.strftime('%Y%m%d-%H%M%S'); path = f'{FEEL}/{rid}-{sub}.json'
+    rec = dict(id=rid, time=time.strftime('%F %T'), verdict=sub, word=None, song=song, sec=sec, events=ev)
+    def save():
+        with open(path + '.tmp', 'w', encoding='utf-8') as f: json.dump(rec, f, ensure_ascii=False, indent=1)
+        os.replace(path + '.tmp', path)
+    save()                                                      # stamped at the key press, before any window
+    if '--no-ask' not in a and os.environ.get('DISPLAY'):
+        word = ask_word(sub, song)
+        if word: rec['word'] = dict((k, en) for k, ru, en in WORDS)[word]; save()
+    bus_emit(dict(kind='feel', verdict=sub, word=rec['word'], song=song, sec=sec, stamp=rid))
+    print(f"{'felt right' if sub == 'right' else 'felt wrong'}{': ' + rec['word'] if rec['word'] else ''} · {song or 'no song'} @ {mmss(sec)} · {len(ev)} events → {path}")
+# <<< r2
+
+
+def main():
+    a = sys.argv[1:]
+    cmd = a[0] if a else 'list'
+    if cmd in ('-h', '--help', 'help'): print(open(__file__).read().split('import os')[0].replace('# ', '')); return
+    if cmd == '--version': print(VERSION); return
+    if cmd == 'path': print(DIR); print(FEEL); print(BUS); return
+    if cmd == 'digest': digest(a[1:]); return
+    if cmd == 'feel': feel(a[1:]); return
+    rs = load_all()
+    extra = glob.glob(f'{FEEL}/*.json') or glob.glob(f'{BUS}/bus-*.jsonl')
+    if cmd == 'list':
+        n = int(a[1]) if len(a) > 1 else 15
+        if not rs: print(f'{D}no reports yet: right-click ДЕМОН > Report…{P}'); return
+        for r in (rs if n == 0 else rs[-n:]): print(line(r))
+        print(f"{D}{len(rs)} report(s) in {DIR}  ·  zarya-report show #N  ·  zarya-report export{P}")
+    elif cmd == 'show':
+        if not rs: print('no reports yet'); return
+        q = a[1] if len(a) > 1 else ''
+        r = rs[-1] if not q or q == 'latest' else next((x for x in rs if str(x.get('n')) == q.lstrip('#') or x.get('id') == q), None)
+        if not r: sys.exit(f'no report {q}')
+        show(r)
+    elif cmd == 'export':
+        if not rs and not extra: sys.exit('nothing to export')
+        out = os.path.expanduser(f"~/Downloads/demon-reports-{time.strftime('%Y%m%d-%H%M')}.tar.gz")
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with tarfile.open(out, 'w:gz') as t:
+            for f in sorted(glob.glob(f'{DIR}/*.json')) + [f'{DIR}/index.log']:
+                if os.path.exists(f): t.add(f, arcname=f'demon-reports/{os.path.basename(f)}')
+            for f in sorted(glob.glob(f'{FEEL}/*.json')): t.add(f, arcname=f'demon-reports/feedback/{os.path.basename(f)}')    # r2
+            for f in sorted(glob.glob(f'{BUS}/bus-*.jsonl'))[-3:]: t.add(f, arcname=f'demon-reports/bus/{os.path.basename(f)}')
+        print(f'{G}{len(rs)} report(s), {len(glob.glob(f"{FEEL}/*.json"))} stamp(s), bus of the last 3 days → {out}{P}\nattach that file in the chat')
+    else: sys.exit(f'unknown command {cmd} (list, show, export, path, digest, feel)')
+
+
+if __name__ == '__main__':
+    main()

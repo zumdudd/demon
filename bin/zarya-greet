@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# ДЕМОН · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+# ZAЯYA terminal greeting v29 (+ k7 mint-pack v47: ПОДМЕНЫШ face): ДЕМОН header + one stats line + the ▚▚ phrase.
+# MINT adapter m1 (crossover guest on SLMaeve): visitor label, weather from a status file, GPU temp, phrases in ~/.config/zarya.
+# MINT adapter m2: hands the phrase line to the pet so it can reprint the greeting after a resize.
+# Old framed HUD kept as zarya-greet.pre-v29. ZARYA_GREET_STATIC=1 skips the animation.
+[ -t 1 ] || exit 0
+# >>> ZARYA greet k7 (mint-pack v47): ПОДМЕНЫШ is the face. Desktop ДЕМОН running: its stats say who is out; not running:
+# resident=1 in daemon.conf (default) = ПОДМЕНЫШ. Its greeting: red ▚▚, blood-pale phrase with one letter it got wrong.
+FACE=demon; ST=$HOME/.cache/zarya-daemon/stats.json
+if [ -r "$ST" ] && (( $(date +%s) - $(stat -c %Y "$ST" 2>/dev/null || echo 0) <= 10 )); then
+  grep -q '"changeling": {"on": true' "$ST" && FACE=ch
+elif ! grep -qE '^\s*resident\s*=\s*0' "$HOME/.config/zarya/daemon.conf" 2>/dev/null; then FACE=ch
+fi
+wrong1() {  # one letter of the phrase swapped for a look-alike, the same letter every time for the same phrase
+  python3 - "$1" <<'PY' 2>/dev/null || printf '%s' "$1"
+import sys
+p = sys.argv[1]; G = dict(А='Д', Е='Є', О='Ѳ', И='Ѝ', Н='Ң', Т='Ҭ', Р='Ҏ', К='Ҝ', С='Ҫ', Л='Ӆ', М='Ӎ', Г='Ґ', Ж='Җ', Х='Ҳ', Ч='Ҷ', Ш='Щ',
+                       В='Ɓ', У='Ў', Я='Ԓ', Д='Ԁ', П='Ԥ', З='Ҙ', Б='Ƃ', A='Λ', E='Ǝ', O='Ø', N='Ͷ', R='Я', S='Ƨ', T='Ŧ', I='Ɨ')
+spots = [i for i, c in enumerate(p) if c.upper() in G]
+if spots:
+    i = spots[sum(map(ord, p)) % len(spots)]; g = G[p[i].upper()]; p = p[:i] + (g if p[i].isupper() else g.lower()) + p[i + 1:]
+print(p, end='')
+PY
+}
+if [ "$FACE" = ch ] && [ -n "$ZARYA_DOCKED" ]; then
+  P=$HOME/.config/zarya/phrases.txt; PH=$([ -r "$P" ] && shuf -n1 "$P" || echo "РАССВЕТ ОТМЕНЁН"); PH=$(wrong1 "$PH")
+  printf '\n  \e[38;2;255;34;68m▚▚ \e[38;2;217;179;186m%s\e[0m\n\n' "$PH"; exit 0
+fi
+# <<< ZARYA greet k7
+# MINT adapter k1: with the ДЕМОН dock open he lives at the bottom, so the greeting is just the phrase
+if [ -n "$ZARYA_DOCKED" ]; then
+  P=$HOME/.config/zarya/phrases.txt; PH=$([ -r "$P" ] && shuf -n1 "$P" || echo "РАССВЕТ ОТМЕНЁН")
+  printf '\n  \e[38;2;123;77;255m▚▚ \e[38;2;242;154;180m%s\e[0m\n\n' "$PH"; exit 0
+fi
+E=$'\e'; N="$E[0m"
+VIO="$E[38;2;123;77;255m"; PINK="$E[38;2;242;154;180m"; HOT="$E[38;2;255;92;138m"
+GRN="$E[38;2;143;217;168m"; BONE="$E[1;38;2;228;224;234m"; DIM="$E[38;2;150;143;166m"; SEP="$E[38;2;80;72;104m · $N"
+DAYS=(ВОСКРЕСЕНЬЕ ПОНЕДЕЛЬНИК ВТОРНИК СРЕДА ЧЕТВЕРГ ПЯТНИЦА СУББОТА)
+MONTHS=(ЯНВАРЯ ФЕВРАЛЯ МАРТА АПРЕЛЯ МАЯ ИЮНЯ ИЮЛЯ АВГУСТА СЕНТЯБРЯ ОКТЯБРЯ НОЯБРЯ ДЕКАБРЯ)
+DATE="${DAYS[$(date +%w)]} $(date +%-d) ${MONTHS[$(( $(date +%-m) - 1 ))]}"
+TIME=$(date +%H:%M)
+
+# weather: optional, read from $ZARYA_WEATHER_JS (default ~/.cache/zarya/weather.js: weather:<WMO code>, temp:<°C>, updated:<epoch>)
+WX=$(python3 - 2>/dev/null <<'PY'
+import os,re,time
+s=open(os.environ.get("ZARYA_WEATHER_JS", os.path.expanduser("~/.cache/zarya/weather.js"))).read()
+code=int(re.search(r"weather:(\d+)",s).group(1)); temp=float(re.search(r"temp:(-?[\d.]+)",s).group(1))
+up=int(re.search(r"updated:(\d+)",s).group(1))
+if time.time()-up>3600: raise SystemExit
+cond="FOG" if code in (45,48) else "DRIZZLE" if 51<=code<=57 else "RAIN" if 61<=code<=67 or 80<=code<=82 or code>=95 else "SNOW" if 71<=code<=77 or code in (85,86) else "CLEAR"
+print(f"{round(temp)}° {cond}")
+PY
+)
+
+EYE=8FD9A8
+BAT=""
+for b in /sys/class/power_supply/BAT*; do
+  [ -r "$b/capacity" ] || continue
+  p=$(cat "$b/capacity"); st=$(cat "$b/status")
+  if [ "$st" = Discharging ]; then
+    if (( p <= 20 )); then BAT="${HOT}BAT $p%${N}"; EYE=F29AB4; else BAT="${DIM}BAT ${GRN}$p%${N}"; fi
+  else BAT="${DIM}BAT ${GRN}$p%${DIM} ↑${N}"; fi
+done
+read -r MT MU <<<"$(free -m | awk '/^Mem/{print $2, $3}')"
+MEM="${DIM}RAM ${GRN}$(awk -v u="$MU" -v t="$MT" 'BEGIN{printf "%.1f/%.1f", u/1024, t/1024}')${DIM} GB${N}"
+T=$("$HOME/.local/bin/zarya-temp" 2>/dev/null)
+if [[ "$T" =~ ^[0-9]+$ ]]; then
+  if (( T >= 80 )); then TMP="${DIM}CPU ${HOT}$T°${N}"; EYE=FF5C8A
+  elif (( T >= 65 )); then TMP="${DIM}CPU ${VIO}$T°${N}"
+  else TMP="${DIM}CPU ${GRN}$T°${N}"; fi
+fi
+G=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1)   # MINT m1
+if [[ "$G" =~ ^[0-9]+$ ]]; then
+  if (( G >= 83 )); then GPU="${DIM}GPU ${HOT}$G°${N}"; EYE=FF5C8A
+  elif (( G >= 70 )); then GPU="${DIM}GPU ${VIO}$G°${N}"
+  else GPU="${DIM}GPU ${GRN}$G°${N}"; fi
+fi
+if ip route show default 2>/dev/null | grep -q .; then NET="${DIM}NET ${GRN}▪${N}"; else NET="${DIM}NET ${HOT}▪ DOWN${N}"; EYE=F29AB4; fi
+
+L1="${BONE}ЗАРЯ ⇢ SLMAEVE${N}${SEP}${DIM}${TIME}${N}"
+[ "$FACE" = ch ] && { L1="$E[38;2;255;34;68mНЕ ОН ⇢ SLMAEVE${N}${SEP}${DIM}${TIME}${N}"; EYE=FF2244; VIO="$E[38;2;255;34;68m"; PINK="$E[38;2;217;179;186m"; }   # k7
+L2="${DIM}${DATE}${N}${WX:+${SEP}${GRN}${WX}${N}}"
+L3=""
+for part in "$BAT" "$MEM" "$TMP" "$GPU" "$NET"; do [ -n "$part" ] && L3+="${L3:+$SEP}$part"; done
+
+echo
+ANIM=-a; [ -n "$ZARYA_GREET_STATIC" ] && ANIM=""
+"$HOME/.local/bin/zarya-daemon" $ANIM -e "$EYE" -- "$L1" "$L2" "$L3"
+
+P=$HOME/.config/zarya/phrases.txt; PH=$([ -r "$P" ] && shuf -n1 "$P" || echo "РАССВЕТ ОТМЕНЁН")
+[ "$FACE" = ch ] && PH=$(wrong1 "$PH")   # k7
+# corrupted line resolves into the phrase
+GL="▚▞▙▟█▓▒░ЖЯШЩЭЮФ"
+for i in 1 2 3 4; do
+  s=""; for ((k=0;k<${#PH};k++)); do
+    ch="${PH:k:1}"; if [ "$ch" != " " ] && (( RANDOM % 5 < 4-i )); then s+="${GL:RANDOM%${#GL}:1}"; else s+="$ch"; fi
+  done
+  printf '\r  %s▚▚ %s%s%s' "$VIO" "$PINK" "$s" "$N"; sleep 0.05
+done
+printf '\r  %s▚▚ %s%s%s\n\n' "$VIO" "$PINK" "$PH" "$N"
+# ДЕМОН stays alive (clickable) above until you type; ZARYA_GREET_HOLD=0 skips
+if [ -z "$ZARYA_GREET_STATIC" ] && [ "${ZARYA_GREET_HOLD:-1}" != 0 ] && [ -t 0 ]; then
+  ZARYA_PHRASE_LINE="  ${VIO}▚▚ ${PINK}${PH}${N}" "$HOME/.local/bin/zarya-daemon" --hold 7 -e "$EYE" -- "$L1" "$L2" "$L3"
+fi
