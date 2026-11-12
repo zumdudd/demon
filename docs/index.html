@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ДЕМОН & ПОДМЕНЫШ · pixel pets that hear music · by ШУМ</title>
-<meta name="description" content="Two pixel-art desktop pets that listen to music. ДЕМОН dances to it. ПОДМЕНЫШ, the changeling, takes his place and explodes on the drop. By ШУМ (shum).">
+<title>ПОДМЕНЫШ · the changeling that hears the drop · by ШУМ</title>
+<meta name="description" content="A pixel changeling living inside a Linux desktop pet. It took ДЕМОН's place, it hears whatever you play, and it blows up on the drop. By ШУМ (shum).">
 <meta property="og:title" content="ДЕМОН & ПОДМЕНЫШ · by ШУМ">
 <meta property="og:description" content="Two pixel pets that hear your music. ДЕМОН dances to it. ПОДМЕНЫШ, the changeling, takes his place and explodes on the drop.">
 <meta property="og:image" content="https://zumdudd.github.io/demon/assets/img/card-v3.jpg">
@@ -12,254 +12,685 @@
 <meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0A0406">
 <link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Golos+Text:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-/* ДЕМОН & ПОДМЕНЫШ · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
-   Night violet is ДЕМОН's world; red is the changeling's. One wrong letter in every title it touches. */
-:root{--bg:#16122E;--bg2:#1B1636;--s:#231D45;--line:#3B3373;--ink:#ECE8FA;--mut:#ADA7D3;--dim:#6E67A0;
- --v:#9D7BFF;--v2:#7B4DFF;--g:#8FD9A8;--r:#FF2244;--r2:#D9B3BA;--pink:#F29AB4;--k:#0E0408;
- --sans:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
-a{color:var(--v)}a:hover{color:var(--ink)}
-img.px{image-rendering:pixelated;image-rendering:crisp-edges}
-.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
-.mono{font-family:var(--mono)}.mut{color:var(--mut)}.rom{font-family:var(--mono);font-size:.62em;color:var(--dim);font-weight:400;letter-spacing:.02em}
+/* ДЕМОН & ПОДМЕНЫШ · page v2 «НЕ ОН» · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+   The changeling took the page. Its palette, its grammar: never tweens (snaps, holds, skips), one wrong letter in every title.
+   ДЕМОН's violet only comes back when it leaves (calm loops, starving, banished). */
+:root{
+ --void:#0A0406;--bg2:#120709;--card:#170B0F;--stage:#2B1C21;--line:#34171F;--line2:#5A2532;
+ --red:#FF2244;--red2:#C81E3F;--blood:#881B22;--wine:#4C0D1C;
+ --ink:#F2DCE0;--mut:#D9B3BA;--dim:#8A5A66;--rust:#FF7A3D;--pink:#FF8FB1;--v:#7B4DFF;--v2:#9D7BFF;--g:#8FD9A8;
+ --acc:var(--red);--acc-ink:#0A0406;
+ --disp:"Unbounded","Golos Text",system-ui,sans-serif;--sans:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+ --cur:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' shape-rendering='crispEdges'%3E%3Cpath fill='%23FF2244' d='M7 0h3v6H7zM7 11h3v6H7zM0 7h6v3H0zM11 7h6v3h-6z'/%3E%3Cpath fill='%23F2DCE0' d='M8 8h1v1H8z'/%3E%3C/svg%3E") 8 8,crosshair}
+html.demon{--void:#0E0B1E;--bg2:#141030;--card:#18133A;--line:#2C2560;--line2:#4A3C8F;--acc:var(--v2);--ink:#ECE8FA;--mut:#ADA7D3;--dim:#6E67A0;--red:#9D7BFF;--red2:#7B4DFF;--blood:#4A3C8F;--wine:#2C2560}
+*{box-sizing:border-box}
+html{scroll-behavior:auto;background:var(--void)}
+body{margin:0;background:var(--void);color:var(--ink);font:17px/1.6 var(--sans);-webkit-font-smoothing:antialiased;cursor:var(--cur);overflow-x:hidden}
+body.gated{overflow:hidden}
+a{color:var(--ink);text-decoration-color:var(--red);text-underline-offset:3px}a:hover{color:var(--red)}
+button,a{cursor:pointer}
+img.px,canvas.px{image-rendering:pixelated;image-rendering:crisp-edges}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px;position:relative}
+.mono{font-family:var(--mono)}.mut{color:var(--mut)}
+.rom{font-family:var(--mono);font-size:.5em;color:var(--dim);font-weight:400;letter-spacing:.04em;text-transform:lowercase;vertical-align:middle}
+.w{color:var(--red);font-weight:inherit}
+::selection{background:var(--red);color:var(--void)}
+:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+/* layers */
+#field,#fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none}
+#field{z-index:0}#fx{z-index:60}
+main,nav,footer,.ticker{position:relative;z-index:2}
+main.shift{transform:translateX(5px);filter:drop-shadow(-5px 0 rgba(255,34,68,.75)) drop-shadow(4px 0 rgba(120,255,235,.18))}
+main.shift2{transform:translateX(-7px) skewX(-1deg)}
+.grab{animation:grab .24s steps(2) infinite}
+@keyframes grab{0%{transform:translate(0,0)}50%{transform:translate(2px,-2px)}100%{transform:translate(-2px,1px)}}
+/* gateway (shirtz: welcome to … enter ⋙) */
+.gate{position:fixed;inset:0;z-index:80;background:var(--void);display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
+.gate.on{display:flex}
+.gate .g-in{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:760px}
+.gate .g-k{font:700 12px var(--mono);letter-spacing:.3em;color:var(--dim);text-transform:uppercase}
+.gate canvas{width:min(300px,62vw);height:auto;margin:10px 0 4px}
+.gate .g-w{font:500 clamp(12px,1.6vw,15px) var(--disp);letter-spacing:.32em;text-transform:uppercase;color:var(--mut);margin:6px 0 0}
+.gate .g-t{font:900 clamp(44px,10vw,124px)/.9 var(--disp);margin:6px 0 10px;letter-spacing:-.03em;color:var(--ink)}
+.gate .g-l{font:400 13px var(--mono);color:var(--dim);min-height:1.6em;margin:0 0 14px}
+.gate .g-l b{color:var(--red);font-weight:700}
+.gate.cut1{clip-path:polygon(0 0,100% 0,100% 38%,0 38%,0 46%,100% 46%,100% 100%,0 100%);transform:translateX(18px)}
+.gate.cut2{clip-path:polygon(0 0,100% 0,100% 12%,0 12%,0 70%,100% 70%,100% 74%,0 74%);transform:translateX(-30px)}
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:10px;font:500 15px var(--disp);text-transform:lowercase;letter-spacing:.02em;padding:13px 22px;border-radius:999px;border:2px solid var(--ink);background:transparent;color:var(--ink);text-decoration:none}
+.pill:hover{background:var(--ink);color:var(--void)}
+.pill:active{transform:translateY(2px)}
+.pill.hot{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.pill.hot:hover{background:var(--ink);border-color:var(--ink)}
+.pill.big{font-size:18px;padding:16px 30px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:6px 11px;border-radius:999px;background:var(--card);border:1px solid var(--line2);color:var(--mut)}
+.badge{display:inline-block;font:600 12px var(--disp);text-transform:lowercase;padding:5px 11px;border-radius:999px;color:#0A0406;background:var(--red)}
+.badge.pink{background:var(--pink)}.badge.rust{background:var(--rust)}.badge.dim{background:var(--mut)}.badge.violet{background:var(--v2)}
 /* nav */
-nav{position:sticky;top:0;z-index:50;background:rgba(22,18,46,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-nav .wrap{display:flex;align-items:center;gap:22px;height:58px}
-nav b{font-weight:900;letter-spacing:.02em}nav b .x{color:var(--r)}
-nav .links{display:flex;gap:18px;margin-left:auto;font-size:15px}nav .links a{color:var(--mut);text-decoration:none}nav .links a:hover{color:var(--ink)}
-@media(max-width:760px){nav .links{display:none}}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,4,6,.84);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+html.demon nav{background:rgba(14,11,30,.86)}
+nav .wrap{display:flex;align-items:center;gap:22px;height:62px}
+.brand{font:900 17px var(--disp);letter-spacing:.02em;text-decoration:none;color:var(--ink);white-space:nowrap}
+.brand .x{color:var(--red)}
+nav .links{display:flex;gap:20px;margin-left:auto;font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase}
+nav .links a{color:var(--mut);text-decoration:none}nav .links a:hover{color:var(--red)}
+.eye{width:34px;height:20px;border-radius:999px;background:#06060C;border:2px solid var(--red);position:relative;flex:none;overflow:hidden}
+.eye i{position:absolute;top:3px;left:13px;width:4px;height:10px;background:var(--red)}
+html.demon .eye{border-color:var(--v2)}html.demon .eye i{background:var(--g);width:8px;height:6px;top:5px}
+@media(max-width:860px){nav .links{display:none}nav .eye{margin-left:auto}}
 /* hero */
-.hero{padding:70px 0 40px}
-.hero h1{font-size:clamp(40px,7vw,86px);line-height:.98;margin:0;font-weight:900;letter-spacing:-.01em}
-.hero h1 .d{color:var(--v)}.hero h1 .p{color:var(--r)}
-.hero .lede{font-size:clamp(18px,2.2vw,23px);color:var(--mut);max-width:40ch;margin:22px 0 28px}
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:38px}
-.pet{background:var(--bg2);border:2px solid var(--line);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px}
-.pet .stage{display:flex;align-items:center;justify-content:center;min-height:250px;background:var(--bg);border-radius:14px}
-.pet h2{margin:0;font-size:28px;font-weight:900}.pet p{margin:0;color:var(--mut);font-size:16px}
-.pet.d{border-color:#4a3c8f}.pet.d h2{color:var(--v)}.pet.p{border-color:#5c1b2c;background:#1a0f22}.pet.p h2{color:var(--r)}
-@media(max-width:760px){.pair{grid-template-columns:1fr}}
+.hero{padding:56px 0 30px}
+.hero .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center}
+@media(max-width:900px){.hero .grid{grid-template-columns:1fr}}
+.kick{font:700 12px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:0 0 14px}
+.kick s{color:var(--v2);text-decoration-color:var(--red);text-decoration-thickness:3px}
+.hero h1{font:900 clamp(40px,5.3vw,84px)/.95 var(--disp);margin:0;letter-spacing:-.035em;white-space:nowrap}
+@media(max-width:900px){.hero h1{font-size:12.4vw}}
+.hero .romp{margin:16px 0 0;display:flex;flex-wrap:wrap;gap:8px}
+.hero .lede{font-size:clamp(18px,2vw,22px);color:var(--mut);max-width:34ch;margin:22px 0 28px;line-height:1.5}
+.hero .lede b{color:var(--ink);font-weight:600}
 .btns{display:flex;flex-wrap:wrap;gap:12px}
-.btn{display:inline-flex;align-items:center;gap:8px;font:700 16px var(--sans);padding:12px 18px;border-radius:14px;border:2px solid var(--line);background:var(--s);color:var(--ink);text-decoration:none;cursor:pointer;box-shadow:0 4px 0 #120e26}
-.btn:hover{border-color:var(--v);color:var(--ink)}.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #120e26}
-.btn.red{border-color:var(--r);background:#2a0d18}.btn.red:hover{border-color:#ff6b86}
+.stage{position:relative;background:var(--stage);border-radius:30px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+html.demon .hero-stage{background:#16122E}
+.hero-stage{aspect-ratio:214/240;width:100%;max-width:520px;justify-self:center;border:2px solid var(--line2)}
+.hero-stage img,.hero-stage canvas{width:100%;height:100%;object-fit:contain}
+.hero-stage canvas{position:absolute;inset:0}
+.st-tag{position:absolute;top:16px;left:16px;z-index:2}
+.st-rec{position:absolute;top:20px;right:20px;z-index:2;font:700 11px var(--mono);letter-spacing:.2em;color:var(--red)}
+.st-rec::before{content:"■ ";animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.st-line{position:absolute;left:18px;right:18px;bottom:16px;z-index:2;font:400 12px var(--mono);color:var(--mut);display:flex;justify-content:space-between;gap:10px}
+.st-line b{color:var(--red);font-weight:700}
+.orig{display:flex;gap:16px;align-items:center;margin-top:16px;max-width:520px;justify-self:center;width:100%}
+.orig .stage{width:132px;height:96px;border-radius:20px;flex:none;border:2px solid var(--line)}
+.orig img{width:116px;height:auto}
+.orig p{margin:0;font-size:14px;color:var(--mut)}.orig b{color:var(--ink)}
+.orig .strike{font:900 15px var(--disp);color:var(--v2);text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:3px}
+/* ticker: moves in snaps, never slides */
+.ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg2);overflow:hidden;white-space:nowrap;padding:12px 0}
+.ticker div{display:inline-block;font:700 14px var(--mono);letter-spacing:.18em;color:var(--dim);animation:tick 40s steps(80) infinite}
+.ticker em{font-style:normal;color:var(--red);margin:0 18px}
+@keyframes tick{to{transform:translateX(-50%)}}
 /* sections */
-section{padding:64px 0;border-top:1px solid #241e48}
-section h2.t{font-size:clamp(28px,4vw,44px);margin:0 0 8px;font-weight:900}
-section .sub{color:var(--mut);margin:0 0 30px;max-width:62ch}
-.glitch{position:relative;display:inline-block;color:var(--r)}
-.glitch::after{content:attr(data-g);position:absolute;left:0;top:0;color:var(--r);clip-path:inset(0 0 0 0);animation:gl 3.2s steps(1) infinite;opacity:0}
-@keyframes gl{0%,93%{opacity:0;transform:none}94%{opacity:1;transform:translateX(3px)}96%{opacity:1;transform:translateX(-2px)}97%,100%{opacity:0}}
-/* video */
-.film{background:#0E0B1E;border:2px solid var(--line);border-radius:22px;overflow:hidden}
+section{padding:84px 0;position:relative}
+.sh{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.sh .num{font:700 13px var(--mono);color:var(--dim);letter-spacing:.1em}
+h2.t{font:900 clamp(36px,5.6vw,72px)/1 var(--disp);margin:0;letter-spacing:-.03em;text-transform:lowercase}
+.sub{color:var(--mut);margin:12px 0 34px;max-width:60ch}
+/* film */
+.film{background:#06060C;border:2px solid var(--line2);border-radius:30px;overflow:hidden}
 .film video{display:block;width:100%;height:auto;background:#000}
-.film .cap{display:flex;justify-content:space-between;gap:12px;padding:12px 18px;color:var(--mut);font-size:14px;flex-wrap:wrap}
-/* genre player */
-.tabs{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:18px}
-@media(max-width:900px){.tabs{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:560px){.tabs{grid-template-columns:repeat(2,1fr)}.genre{padding:16px}.scenes{grid-template-columns:repeat(2,1fr)}.scenes img{height:120px}}
-.genre>*{min-width:0}td:first-child{white-space:normal}
-.tab{font:700 14px var(--sans);text-align:left;padding:12px;border-radius:14px;border:2px solid var(--line);background:var(--bg2);color:var(--ink);cursor:pointer;min-height:76px}
-.tab small{display:block;font:400 12px var(--mono);color:var(--dim);margin-top:4px}
-.tab:hover{border-color:var(--v)}.tab.on{border-color:var(--r);background:#2a0d18}
-.tab .n{color:var(--dim);font-family:var(--mono);font-size:12px}
-.genre{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;background:var(--bg2);border:2px solid var(--line);border-radius:22px;padding:22px}
-@media(max-width:860px){.genre{grid-template-columns:1fr}}
-.genre h3{margin:0;font-size:30px;font-weight:900}.genre .who{font-family:var(--mono);font-size:13px;color:var(--dim);margin:4px 0 14px}
-.genre p{margin:0 0 14px;color:var(--mut)}
-.scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.scenes figure{margin:0;background:var(--bg);border-radius:12px;padding:8px;text-align:center}
-.scenes img{width:100%;height:150px;object-fit:contain}.scenes figcaption{font:600 12px var(--mono);color:var(--mut);margin-top:4px}
-.ctrl{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px}
-.meter{flex:1;min-width:160px;height:8px;background:#0E0B1E;border-radius:6px;overflow:hidden}.meter i{display:block;height:100%;width:0;background:var(--r);transition:width .06s linear}
-.note{font-size:13px;color:var(--dim)}
-/* explainers */
-.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:860px){.two{grid-template-columns:1fr}}
-.card{background:var(--bg2);border:2px solid var(--line);border-radius:20px;padding:22px}
-.card h3{margin:0 0 6px;font-size:24px;font-weight:900}.card ul{margin:10px 0 0;padding-left:20px;color:var(--mut)}.card li{margin:6px 0}
-.card.p{background:#1a0f22;border-color:#5c1b2c}.card.p h3{color:var(--r)}.card.d h3{color:var(--v)}
-/* gallery */
-.gal-g h3{font-size:18px;color:var(--v);margin:26px 0 10px;font-weight:700}
-.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
-.gal button{all:unset;cursor:zoom-in;background:var(--bg2);border:2px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
-.gal button:hover,.gal button:focus-visible{border-color:var(--v)}
-.gal .st{display:flex;align-items:center;justify-content:center;height:220px;background:var(--bg)}
-.gal img{max-width:100%;max-height:210px}.gal .c{padding:10px 12px;font-size:14px;color:var(--mut)}.gal .c b{color:var(--ink);display:block;font-size:15px}
-.lb{position:fixed;inset:0;background:rgba(10,8,22,.94);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:100;padding:24px}
-.lb.on{display:flex}.lb img{width:min(92vw,900px);max-height:76vh;object-fit:contain}.lb p{color:var(--mut);max-width:70ch;text-align:center;margin:0}
-/* how + glossary */
+.film .cap{display:flex;justify-content:space-between;gap:12px;padding:14px 22px;font:400 12px var(--mono);letter-spacing:.06em;color:var(--dim);flex-wrap:wrap;text-transform:uppercase}
+/* genre tiles (shirtz category tiles) */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+@media(max-width:900px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{all:unset;box-sizing:border-box;position:relative;cursor:pointer;background:var(--stage);border-radius:24px;aspect-ratio:1/1;overflow:hidden;border:3px solid transparent;display:block}
+.tile img{position:absolute;inset:8% 8% 26% 8%;width:84%;height:66%;object-fit:contain;opacity:.95}
+.tile .badge{position:absolute;top:12px;left:12px;z-index:2}
+.tile .n{position:absolute;top:14px;right:16px;font:700 12px var(--mono);color:var(--dim)}
+.tile .lab{position:absolute;left:14px;right:14px;bottom:12px;z-index:2}
+.tile .lab small{display:block;font:700 11px var(--mono);letter-spacing:.14em;color:var(--mut)}
+.tile .lab b{display:block;font:700 clamp(18px,2.2vw,28px)/1.05 var(--disp);text-transform:lowercase;color:var(--ink);letter-spacing:-.01em}
+.tile:hover{border-color:var(--ink)}
+.tile.on{border-color:var(--red)}
+.tile.on .lab b{color:var(--red)}
+.tile.on::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 4px);pointer-events:none}
+.genre{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;background:var(--card);border:2px solid var(--line2);border-radius:30px;padding:26px}
+@media(max-width:860px){.genre{grid-template-columns:1fr;padding:18px}}
+.genre>*{min-width:0}
+.genre h3{margin:0;font:900 clamp(26px,3vw,38px)/1.05 var(--disp);letter-spacing:-.02em}
+.genre .who{font:400 12px var(--mono);letter-spacing:.06em;color:var(--dim);margin:8px 0 14px;text-transform:uppercase}
+.genre p{margin:0 0 16px;color:var(--mut)}
+.scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.scenes figure{margin:0;background:var(--stage);border-radius:18px;padding:8px;text-align:center}
+.scenes img{width:100%;height:140px;object-fit:contain}.scenes figcaption{font:700 10px var(--mono);letter-spacing:.08em;color:var(--mut);margin-top:4px;text-transform:uppercase}
+.ctrl{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px}
+.meter{flex:1;min-width:150px;height:14px;display:flex;gap:3px}
+.meter i{flex:1;background:var(--line);border-radius:2px}.meter i.on{background:var(--red)}
+.note{font:400 12px var(--mono);color:var(--dim);margin-top:14px}
+/* who */
+.two{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}@media(max-width:860px){.two{grid-template-columns:1fr}}
+.card{background:var(--card);border:2px solid var(--line);border-radius:28px;padding:26px;position:relative;overflow:hidden}
+.card h3{margin:0 0 8px;font:900 28px var(--disp);letter-spacing:-.02em}
+.card.p{border-color:var(--line2)}
+.card.p .bar{margin:-26px -26px 22px;padding:10px 22px;background:#06060C;border-bottom:2px solid var(--line2);font:700 11px var(--mono);letter-spacing:.14em;color:var(--dim);display:flex;justify-content:space-between}
+.card.p .bar b{color:var(--red)}
+.card.d h3{color:var(--v2)}
+.card ol{list-style:none;margin:16px 0 0;padding:0;color:var(--mut)}
+.card ol li{display:grid;grid-template-columns:44px 1fr;gap:6px;padding:12px 0;border-top:1px dashed var(--line2)}
+.card ol li::before{content:attr(data-n);font:700 12px var(--mono);color:var(--red);padding-top:3px}
+.card.d ol li::before{color:var(--v2)}
+.card ol b{color:var(--ink);font-weight:600}
+/* gallery (shirtz carousels) */
+.gg{margin-top:34px}
+.gg-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.gg-h h3{margin:0;font:700 clamp(18px,2vw,24px) var(--disp);text-transform:lowercase;letter-spacing:-.01em}
+.gg-h span{font:700 11px var(--mono);letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.row{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:12px;scrollbar-width:thin;scrollbar-color:var(--red) var(--line)}
+.row button{all:unset;cursor:zoom-in;scroll-snap-align:start;flex:0 0 clamp(230px,26vw,300px);display:flex;flex-direction:column;gap:8px}
+.row .st{background:var(--stage);border-radius:24px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border:3px solid transparent}
+.row .st img{max-width:88%;max-height:88%}
+.row button:hover .st,.row button:focus-visible .st{border-color:var(--red)}
+.row .c1{display:flex;justify-content:space-between;gap:8px;font:700 11px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.row .c1 i{font-style:normal;color:var(--dim);font-weight:400;text-transform:lowercase;letter-spacing:.04em}
+.row .c2{font-size:13px;color:var(--dim);line-height:1.45}
+.lb{position:fixed;inset:0;background:rgba(10,4,6,.96);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:90;padding:24px}
+.lb.on{display:flex}
+.lb .lb-s{position:relative;background:var(--stage);border-radius:30px;padding:18px;border:2px solid var(--line2)}
+.lb .lb-s::after{content:"";position:absolute;inset:0;border-radius:28px;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 2px,transparent 2px 4px);pointer-events:none}
+.lb img{display:block;width:min(88vw,820px);max-height:70vh;object-fit:contain}
+.lb p{color:var(--mut);max-width:70ch;text-align:center;margin:0}
+.lb p b{color:var(--ink);font-family:var(--disp)}
+/* how */
 .how{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}@media(max-width:860px){.how{grid-template-columns:1fr}}
-.how .card h3{font-size:19px}.how .card p{color:var(--mut);margin:6px 0 0;font-size:15px}
-table{width:100%;border-collapse:collapse;font-size:15px}td{padding:10px 12px;border-bottom:1px solid #2b2456;vertical-align:top}
-td:first-child{font-weight:700;white-space:nowrap}td .rom{font-size:12px}td:last-child{color:var(--mut)}
-.gl{columns:2;column-gap:22px}@media(max-width:760px){.gl{columns:1}}.gl table{break-inside:avoid}
-footer{padding:46px 0 60px;border-top:1px solid #241e48;color:var(--mut);font-size:15px}
-footer .big{font-size:22px;color:var(--ink);font-weight:900}
-:focus-visible{outline:3px solid var(--v);outline-offset:2px}
+.how .card{padding-top:20px}
+.how .big{font:900 74px/1 var(--disp);color:transparent;-webkit-text-stroke:2px var(--red);display:block;margin-bottom:10px}
+.how h3{font-size:20px}.how p{color:var(--mut);margin:6px 0 0;font-size:15px}
+/* words */
+.gl{display:grid;grid-template-columns:repeat(2,1fr);column-gap:34px}@media(max-width:760px){.gl{grid-template-columns:1fr}}
+.wd{display:flex;align-items:baseline;gap:10px;padding:11px 0;border-bottom:1px dashed var(--line2)}
+.wd b{font:700 15px var(--disp);white-space:nowrap;min-width:0}
+.wd i{font:400 12px var(--mono);font-style:normal;color:var(--dim);white-space:nowrap}
+.wd .dots{flex:1;border-bottom:2px dotted var(--line2);transform:translateY(-4px);min-width:16px}
+.wd span{color:var(--mut);font-size:15px;text-align:right}
+/* footer (shirtz doodle wall) */
+footer{padding:90px 0 120px;border-top:1px solid var(--line);background-color:var(--void);background-repeat:repeat}
+footer .bye{font:900 clamp(60px,14vw,190px)/.85 var(--disp);letter-spacing:-.05em;margin:0}
+footer .tag{font:400 13px var(--mono);color:var(--dim);margin:18px 0 34px;letter-spacing:.06em}
+footer .tag b{color:var(--red)}
+footer .cols{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;color:var(--mut);font-size:15px}
+footer .cols p{margin:0}
+footer .who{font:900 20px var(--disp);color:var(--ink)}
+/* hunger HUD (the dock's meter) */
+.hud{position:fixed;left:16px;bottom:16px;z-index:70;display:flex;align-items:center;gap:10px;background:rgba(6,6,12,.9);border:2px solid var(--line2);border-radius:999px;padding:7px 8px 7px 14px;font:700 11px var(--mono);letter-spacing:.12em;color:var(--mut)}
+.hud .hl{color:var(--red)}
+.hud .hm{display:flex;gap:2px}.hud .hm i{width:7px;height:12px;background:var(--line)}.hud .hm i.on{background:var(--red)}
+.hud .hs{font-weight:400;color:var(--dim);letter-spacing:.06em;min-width:12ch}
+.hud button{all:unset;cursor:pointer;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--card);color:var(--red);border:1px solid var(--line2);font:700 12px var(--mono)}
+.hud button:hover{background:var(--red);color:var(--void)}
+.hud.shake{animation:grab .2s steps(2) 4}
+@media(max-width:560px){.hud .hs{display:none}}
+@media (prefers-reduced-motion:reduce){.ticker div,.st-rec::before{animation:none}}
 </style>
 </head>
 <body>
-<nav><div class="wrap"><b>ДЕМОН <span class="x">&amp;</span> ПОДМЕНЫШ</b>
-<div class="links"><a href="#film">Film</a><a href="#genres">Pick a genre</a><a href="#who">The two</a><a href="#gallery">Gallery</a><a href="#how">How</a><a href="#words">Words</a><a href="https://github.com/zumdudd/demon">GitHub</a></div></div></nav>
+<canvas id="field" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
 
-<header class="hero"><div class="wrap">
- <h1><span class="d">ДЕМОН</span> &amp;<br><span class="p">ПОДМЕНЫШ</span></h1>
- <p class="lede">Two pixel pets that live on a Linux desktop and hear music. One listens and dances. The other takes his place and waits for the drop.</p>
- <div class="btns"><a class="btn red" href="#film">▶ Watch the film</a><a class="btn" href="#genres">♪ Pick a genre</a><a class="btn" href="https://github.com/zumdudd/demon">GitHub</a></div>
- <div class="pair">
-  <div class="pet d"><div class="stage"><img class="px" src="assets/gifs/hero-demon.gif" alt="ДЕМОН, a violet pixel creature with a visor, dancing" width="168" height="120" style="width:min(280px,100%);height:auto"></div>
-   <h2>ДЕМОН <span class="rom">demon</span></h2><p>The witness. He studies every song and dances to it. The song is the main character; he is the one who feels it.</p></div>
-  <div class="pet p"><div class="stage"><img class="px" src="assets/gifs/hero-podmenysh.gif" alt="ПОДМЕНЫШ, a dark red changeling with long horns, snapping to the beat" width="232" height="240" style="width:min(250px,100%);height:auto"></div>
-   <h2>ПОДМЕНЫШ <span class="rom">podmenysh · the changeling</span></h2><p>The thing left in his place. It wears his shape, moves like noise, and explodes on the drop.</p></div>
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-label="Enter the page">
+ <div class="g-in">
+  <p class="g-k">ДОСМОТР · checkpoint</p>
+  <canvas id="gateCv" class="px" width="214" height="240"></canvas>
+  <p class="g-w">добро пожаловать · welcome to</p>
+  <p class="g-t" aria-label="ПОДМЕНЫШ">ПОДМЕНЫ<b class="w" aria-hidden="true">Щ</b></p>
+  <p class="g-l" id="gateLog">&gt; scanning visitor_</p>
+  <button class="pill hot big" id="enter">войти <span aria-hidden="true">⋙</span> enter</button>
+ </div>
+</div>
+
+<nav><div class="wrap"><a class="brand" href="#top" id="sig" aria-label="ДЕМОН & ПОДМЕНЫШ">ПОДМЕНЫ<span class="w">Щ</span></a>
+<div class="links"><a href="#film">Film</a><a href="#genres">Feed it</a><a href="#who">Not him</a><a href="#gallery">Gallery</a><a href="#how">How</a><a href="#words">Words</a><a href="https://github.com/zumdudd/demon">GitHub</a></div>
+<span class="eye" id="eye" aria-hidden="true"><i></i></span></div></nav>
+
+<main id="top">
+<header class="hero"><div class="wrap grid">
+ <div>
+  <p class="kick"><s>ДЕМОН</s> → НЕ ОН · not him</p>
+  <h1 aria-label="ПОДМЕНЫШ">ПОДМЕНЫ<span class="w" aria-hidden="true">Щ</span></h1>
+  <div class="romp"><span class="chip">podmenysh</span><span class="chip">the changeling</span><span class="chip">by ШУМ</span></div>
+  <p class="lede">A pixel changeling living inside a Linux desktop pet. It took <b>ДЕМОН</b>'s place, it hears whatever you play, and it <b>blows up on the drop</b>.</p>
+  <div class="btns"><a class="pill hot" href="#film">▶ watch the film</a><a class="pill" href="#genres">♪ feed it a genre</a><a class="pill" href="https://github.com/zumdudd/demon">github</a></div>
+ </div>
+ <div>
+  <div class="stage hero-stage" id="heroStage">
+   <img class="px" id="heroImg" src="assets/gifs/hero-podmenysh.gif" alt="ПОДМЕНЫШ, a black pixel changeling with a red outline and long horns, snapping to the beat" width="214" height="240">
+   <canvas class="px" id="heroCv" width="214" height="240" hidden aria-hidden="true"></canvas>
+   <span class="badge st-tag" id="heroTag">не он</span><span class="st-rec">REC</span>
+   <div class="st-line"><span id="heroFx">&gt; resident · ⇢ SLMAEVE</span><span><b id="heroState">СМОТРИТ</b> · it watches</span></div>
+  </div>
+  <div class="orig"><div class="stage"><img class="px" src="assets/gifs/hero-demon.gif" alt="ДЕМОН, the violet pixel creature it replaced" width="278" height="159"></div>
+   <p><span class="strike">ДЕМОН</span> <span class="rom">demon · the original</span><br>The violet one it replaced. He studies every song and dances. He only gets the calm ones back.</p></div>
  </div>
 </div></header>
 
+<div class="ticker" aria-hidden="true"><div id="tick"></div></div>
+
 <section id="film"><div class="wrap">
- <h2 class="t">The film</h2>
+ <div class="sh"><span class="num">[01]</span><h2 class="t" aria-label="the film">the fi<span class="w" aria-hidden="true">л</span>m</h2></div>
  <p class="sub">92 seconds, one song, eight genres. Every frame of the pets comes from their real code, driven by the music: nothing is animated by hand. Sound on.</p>
  <div class="film"><video controls playsinline preload="metadata" poster="assets/video/poster.jpg">
   <source src="assets/video/showcase.webm" type="video/webm"><source src="assets/video/showcase.mp4" type="video/mp4"></video>
-  <div class="cap"><span>1920×1080 · 25 fps · captions in English</span><a href="assets/video/showcase.mp4" download>Download MP4</a></div></div>
+  <div class="cap"><span>1920×1080 · 25 fps · captions in English</span><a href="assets/video/showcase.mp4" download>download mp4</a></div></div>
 </div></section>
 
 <section id="genres"><div class="wrap">
- <h2 class="t">Pick a genre</h2>
- <p class="sub">The song has eight parts, and each one wakes up something different in them. Pick one: it loops while you look.</p>
- <div class="tabs" id="tabs" role="tablist"></div>
+ <div class="sh"><span class="num">[02]</span><h2 class="t" aria-label="feed it a genre">feed it a gen<span class="w" aria-hidden="true">я</span>e</h2></div>
+ <p class="sub">The song has eight parts and each one wakes up something different. Pick one and loop it: the page hears it too. Hard parts feed it. Calm parts make it leave, and ДЕМОН comes back.</p>
+ <div class="tiles" id="tabs" role="tablist" aria-label="Song parts"></div>
  <div class="genre" id="genre" role="tabpanel">
   <div><h3 id="g-t"></h3><div class="who" id="g-who"></div><p id="g-p"></p>
-   <div class="ctrl"><button class="btn red" id="g-play">▶ Loop it</button><div class="meter" aria-hidden="true"><i id="g-m"></i></div></div>
-   <p class="note" id="g-note">Loops play without a gap. Audio starts only when you press play.</p></div>
+   <div class="ctrl"><button class="pill hot" id="g-play">▶ loop it</button><div class="meter" id="g-m" aria-hidden="true"></div></div>
+   <p class="note">Loops play without a gap. Audio starts only when you press play.</p></div>
   <div class="scenes" id="g-sc"></div>
  </div>
 </div></section>
 
 <section id="who"><div class="wrap">
- <h2 class="t">The two of them</h2>
- <p class="sub">They share one small window. They never share it at the same time.</p>
+ <div class="sh"><span class="num">[03]</span><h2 class="t" aria-label="not him">not hi<span class="w" aria-hidden="true">м</span></h2></div>
+ <p class="sub">They share one small window. They never share it at the same time. Since version 47 the changeling lives there, and he visits.</p>
  <div class="two">
-  <div class="card d"><h3>ДЕМОН <span class="rom">demon</span></h3>
+  <div class="card p"><div class="bar"><span>▚▚ ПОДМЕНЫШ · FORM 18×14</span><b>НЕ ОН</b></div>
+   <h3>ПОДМЕНЫ<span class="w">Щ</span> <span class="rom">podmenysh · the changeling</span></h3>
+   <p class="mut">A changeling in the folk sense: a thing left in place of the real one. Black flesh, a one-cell red outline, longer horns, and one wrong letter in every title it shows.</p>
+   <ol><li data-n="01"><span><b>Never tweens.</b> It moves like harsh noise sounds: snaps, holds, skips and cuts. No smooth motion, ever. Not even on this page.</span></li>
+   <li data-n="02"><span><b>Ahead of the beat.</b> It moves 30 to 90 ms before each kick, as if it already knows.</span></li>
+   <li data-n="03"><span><b>The soul leaves.</b> On the gap before a drop its red goes out of the body. The body keeps moving. Then it blows up on the first kick.</span></li>
+   <li data-n="04"><span><b>Hunger.</b> Hard songs feed it, calm songs starve it. Starved, it leaves, and ДЕМОН comes back.</span></li>
+   <li data-n="05"><span><b>It eats the copy.</b> It fakes his dances, gets them wrong on purpose, and sometimes bites the fake ДЕМОН apart.</span></li></ol></div>
+  <div class="card d"><h3>ДЕМОН <span class="rom">demon · the original</span></h3>
    <p class="mut">A 14×10 pixel creature in violet, with one green eye behind a visor. Anything about his face happens inside the visor.</p>
-   <ul><li><b>Three ears.</b> A live ear (kicks, snares, hats, voice, tempo), a song map learned after one full play (sections, drops, choruses), and a reading of what the song is about.</li>
-   <li><b>A witness.</b> He dances in dance modes that change on the song's real sections, and he reacts only to big moments.</li>
-   <li><b>He speaks twice.</b> «ВОТ ОНО.» (<i>this is it</i>) when a frame freezes, «…СЛЫШИШЬ?» (<i>do you hear it?</i>) at the very peak.</li></ul></div>
-  <div class="card p"><h3><span class="glitch" data-g="ПОДМЕНЫЩ">ПОДМЕНЫШ</span> <span class="rom">podmenysh · the changeling</span></h3>
-   <p class="mut">A changeling in the folk sense: a thing left in place of the real one. Dark red, longer horns, one wrong letter in every title it shows.</p>
-   <ul><li><b>Never tweens.</b> It moves like harsh noise sounds: snaps, holds, skips and cuts. No smooth motion, ever.</li>
-   <li><b>Ahead of the beat.</b> It moves 30 to 90 ms before each kick, as if it already knows.</li>
-   <li><b>Hunger.</b> Hard songs feed it, calm songs starve it. Starved, it leaves, and ДЕМОН comes back.</li>
-   <li><b>It eats the copy.</b> It fakes his dances, gets them wrong on purpose, and sometimes bites the fake ДЕМОН apart.</li></ul></div>
+   <ol><li data-n="01"><span><b>Three ears.</b> A live ear (kicks, snares, hats, voice, tempo), a song map learned after one full play, and a reading of what the song is about.</span></li>
+   <li data-n="02"><span><b>A witness.</b> The song is the main character. He dances, and reacts only to big moments.</span></li>
+   <li data-n="03"><span><b>He speaks twice.</b> «ВОТ ОНО.» (<i>this is it</i>) when a frame freezes, «…СЛЫШИШЬ?» (<i>do you hear it?</i>) at the very peak.</span></li></ol></div>
  </div>
 </div></section>
 
 <section id="gallery"><div class="wrap">
- <h2 class="t">Gallery</h2>
- <p class="sub">Twenty scenes, each rendered from the real engine on a scripted song. Click any of them to see it big.</p>
+ <div class="sh"><span class="num">[04]</span><h2 class="t" aria-label="gallery">ga<span class="w" aria-hidden="true">л</span>lery</h2></div>
+ <p class="sub">Twenty scenes, each rendered from the real engine on a scripted song. Swipe a row, click any scene to see it big.</p>
  <div id="gal"></div>
 </div></section>
 
 <section id="how"><div class="wrap">
- <h2 class="t">How it's made</h2>
+ <div class="sh"><span class="num">[05]</span><h2 class="t" aria-label="how it's made">ho<span class="w" aria-hidden="true">ш</span> it's made</h2></div>
  <p class="sub">A desktop pet for Linux Mint (Python, GTK3, cairo), split into small parts that run in order. The pictures, the music and the film are all made from code.</p>
  <div class="how">
-  <div class="card"><h3>Real frames</h3><p>The GIFs and the film run the pet's own drawing code on a fake clock, with a song fed to its ear instead of live audio. What you see is what the pet does on the desktop.</p></div>
-  <div class="card"><h3>A song from scratch</h3><p>The music is synthesized in Python: no samples, no outside audio. One original melody travels through all eight genres. The forgery part is the cute part itself, sped up ×1.30.</p></div>
-  <div class="card"><h3>In sync</h3><p>The song writes a map of every kick, snare and hat. The film reads that map, so the changeling blows up on the exact kick of each drop.</p></div>
+  <div class="card"><span class="big">01</span><h3>Real frames</h3><p>The GIFs and the film run the pet's own drawing code on a fake clock, with a song fed to its ear instead of live audio. What you see is what the pet does on the desktop.</p></div>
+  <div class="card"><span class="big">02</span><h3>A song from scratch</h3><p>The music is synthesized in Python: no samples, no outside audio. One original melody travels through all eight genres. The forgery part is the cute part itself, sped up ×1.30.</p></div>
+  <div class="card"><span class="big">03</span><h3>In sync</h3><p>The song writes a map of every kick, snare and hat. The film reads that map, so the changeling blows up on the exact kick of each drop. This page reads the loops the same way.</p></div>
  </div>
 </div></section>
 
 <section id="words"><div class="wrap">
- <h2 class="t">Words</h2>
- <p class="sub">Their world speaks Russian in capitals. Here is what the words mean.</p>
- <div class="gl"><table id="gloss"></table></div>
+ <div class="sh"><span class="num">[06]</span><h2 class="t" aria-label="words">шords</h2></div>
+ <p class="sub">Their world speaks Russian in capitals. Hover a word and it forges itself into Latin.</p>
+ <div class="gl" id="gloss"></div>
 </div></section>
+</main>
 
-<footer><div class="wrap">
- <p class="big">ДЕМОН &amp; ПОДМЕНЫШ by ШУМ <span class="rom">shum · noise</span></p>
- <p>Concept and direction: ШУМ. Built with Claude (Anthropic).<br>
- Code: MIT · Art: CC BY 4.0 · Music: ШУМ × Claude, synthesized from scratch, CC BY 4.0.<br>
- <a href="https://github.com/zumdudd/demon">github.com/zumdudd/demon</a></p>
+<footer id="foot"><div class="wrap">
+ <p class="bye" aria-label="it stays.">it sta<span class="w" aria-hidden="true">я</span>s.</p>
+ <p class="tag">НЕ ОН ⇢ <b>YOU</b> · it heard you scroll.</p>
+ <div class="cols">
+  <div><p class="who">ДЕМОН &amp; ПОДМЕНЫШ by ШУМ <span class="rom">shum · noise</span></p>
+  <p>Concept and direction: ШУМ. Built with Claude (Anthropic).<br>
+  Code: MIT · Art: CC BY 4.0 · Music: ШУМ × Claude, synthesized from scratch, CC BY 4.0.<br>
+  <a href="https://github.com/zumdudd/demon">github.com/zumdudd/demon</a></p></div>
+  <button class="pill" id="banish">✕ изгнать · banish it</button>
+ </div>
 </div></footer>
 
-<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Scene"><img class="px" id="lb-i" alt=""><p id="lb-p"></p><button class="btn" id="lb-x">Close</button></div>
+<div class="hud" id="hud" aria-hidden="true"><span class="hl">ГОЛОД</span><span class="hm" id="hm"></span><span class="hs" id="hs">СМОТРИТ</span><button id="hudBan" tabindex="-1" title="Изгнать · banish it">✕</button></div>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Scene"><div class="lb-s"><img class="px" id="lb-i" alt=""></div><p id="lb-p"></p><button class="pill" id="lb-x">close</button></div>
 
 <script>
+/* ДЕМОН & ПОДМЕНЫШ · page v2 · concept + direction: ШУМ (shum) · built with Claude (Anthropic) */
 const SC = {
- 'hero-demon':['ДЕМОН','He dances. The song is the hero, he is the one who feels it.'],
- 'hero-podmenysh':['ПОДМЕНЫШ','In his body, snapping on the beat. Never a smooth move.'],
- 'zarazhenie':['ЗАРАЖЕНИЕ · infection','The way in: he bursts on a kick, hangs for a beat, and comes back together as the changeling. Eyes last.'],
- 'smena':['СМЕНА · КУЛЬТ','A way out. The ritual depends on the song: КУЛЬТ for industrial noise, ПРИЗЫВ for metal, ГНИЛЬ for calm.'],
- 'gnil':['ГНИЛЬ · rot','On calm songs it does not leave, it rots off him. Then he falls asleep.'],
- 'chuet':['ЧУЕТ · it smells it','It smells a hard song coming before the drop arrives.'],
- 'detonatsiya':['ДЕТОНАЦИЯ · detonation','Wind-up on the build, the soul leaves in the gap, it blows up on the first kick of the drop, then puts itself back together.'],
- 'delikates':['ДЕЛИКАТЕС · delicacy','Its favourite songs: harsh noise rap, heavy dubstep, hard techno. They summon it, and it blows up twice.'],
- 'krik':['КРИК · scream','A red word for every vocal hit in the chorus.'],
- 'primanka':['ПРИМАНКА · the lure','Cute songs with a dark core get a cute mask on its visor. Hard hits flicker it back to the slit.'],
- 'kukla':['КУКЛА · the doll','Dense, fast hits pull pink puppet strings.'],
- 'dva-litsa':['ДВА ЛИЦА · two faces','The hard switch between the cute face and the real one.'],
- 'poddelka':['ПОДДЕЛКА · forgery','A sped-up edit is a forgery, like itself. It runs at the edit\'s speed, with his dim ghost behind it.'],
- 'peremotka':['ПЕРЕМОТКА · rewind','The blast plays backwards and reassembles in skips.'],
- 'konfetti':['КОНФЕТТИ · confetti','Hearts and stars burst out, crack on the floor, and rot into red stains.'],
- 'pitch':['ПИТЧ · pitch','Its rows fly apart to alternating sides.'],
- 'past':['ПАСТЬ · the maw','It fakes ДЕМОН, then eats the copy in bites, a hair before each kick.'],
- 'proval':['ПРОВАЛ · failure','A calm dance on a hard song gives it away. The disguise breaks, and it eats the failed copy.'],
- 'kadr':['КАДР · freeze frame','At an epic peak the frame freezes. «ВОТ ОНО.», this is it.'],
- 'ogon':['ОГОНЬ · fire','An epic song at full excitement: flames climb him while he keeps dancing.']
+ 'hero-demon':['ДЕМОН','demon','He dances. The song is the hero, he is the one who feels it.'],
+ 'hero-podmenysh':['ПОДМЕНЫШ','podmenysh','In his body, snapping on the beat. Never a smooth move.'],
+ 'zarazhenie':['ЗАРАЖЕНИЕ','infection','The way in: he bursts on a kick, hangs for a beat, and comes back together as the changeling. Eyes last.'],
+ 'smena':['СМЕНА · КУЛЬТ','the change','A way out. The ritual depends on the song: КУЛЬТ for industrial noise, ПРИЗЫВ for metal, ГНИЛЬ for calm.'],
+ 'gnil':['ГНИЛЬ','rot','On calm songs it does not leave, it rots off him. Then he falls asleep.'],
+ 'chuet':['ЧУЕТ','it smells it','It smells a hard song coming before the drop arrives.'],
+ 'detonatsiya':['ДЕТОНАЦИЯ','detonation','Wind-up on the build, the soul leaves in the gap, it blows up on the first kick of the drop, then puts itself back together.'],
+ 'delikates':['ДЕЛИКАТЕС','delicacy','Its favourite songs: harsh noise rap, heavy dubstep, hard techno. They summon it, and it blows up twice.'],
+ 'krik':['КРИК','scream','A red word for every vocal hit in the chorus.'],
+ 'primanka':['ПРИМАНКА','the lure','Cute songs with a dark core get a cute mask on its visor. Hard hits flicker it back to the slit.'],
+ 'kukla':['КУКЛА','the doll','Dense, fast hits pull pink puppet strings.'],
+ 'dva-litsa':['ДВА ЛИЦА','two faces','The hard switch between the cute face and the real one.'],
+ 'poddelka':['ПОДДЕЛКА','forgery','A sped-up edit is a forgery, like itself. It runs at the edit\'s speed, with his dim ghost behind it.'],
+ 'peremotka':['ПЕРЕМОТКА','rewind','The blast plays backwards and reassembles in skips.'],
+ 'konfetti':['КОНФЕТТИ','confetti','Hearts and stars burst out, crack on the floor, and rot into red stains.'],
+ 'pitch':['ПИТЧ','pitch','Its rows fly apart to alternating sides.'],
+ 'past':['ПАСТЬ','the maw','It fakes ДЕМОН, then eats the copy in bites, a hair before each kick.'],
+ 'proval':['ПРОВАЛ','failure','A calm dance on a hard song gives it away. The disguise breaks, and it eats the failed copy.'],
+ 'kadr':['КАДР','freeze frame','At an epic peak the frame freezes. «ВОТ ОНО.», this is it.'],
+ 'ogon':['ОГОНЬ','fire','An epic song at full excitement: flames climb him while he keeps dancing.']
 };
-const GROUPS=[['The two of them',['hero-demon','hero-podmenysh']],['The change',['zarazhenie','smena','gnil']],['The hype arc',['chuet','detonatsiya','delikates','krik']],
- ['ПРИМАНКА · the lure',['primanka','kukla','dva-litsa']],['ПОДДЕЛКА · the forgery',['poddelka','peremotka','konfetti','pitch']],['The maw',['past','proval']],['ДЕМОН · the witness',['kadr','ogon']]];
+const GROUPS=[['the two of them',['hero-podmenysh','hero-demon']],['the change',['zarazhenie','smena','gnil']],['the hype arc',['chuet','detonatsiya','delikates','krik']],
+ ['ПРИМАНКА · the lure',['primanka','kukla','dva-litsa']],['ПОДДЕЛКА · the forgery',['poddelka','peremotka','konfetti','pitch']],['the maw',['past','proval']],['ДЕМОН · the witness',['kadr','ogon']]];
 const PARTS=[
- {f:'01-calm',t:'ПРИВАЛ',r:'calm',g:'ambient · rain · 80 bpm',who:'ДЕМОН alone',p:'Rain, slow pads, a few bells. He is out on calm songs: he listens, and the rain shows in his visor.',sc:['hero-demon']},
- {f:'02-build',t:'ЧУЕТ',r:'the build',g:'build · 140 bpm',who:'ПОДМЕНЫШ arrives',p:'A snare roll speeding up, a riser, then one beat of silence. It takes his place and smells the drop coming.',sc:['zarazhenie','chuet','smena']},
- {f:'03-deli',t:'ДЕЛИКАТЕС',r:'industrial',g:'industrial noise · 140 bpm',who:'ПОДМЕНЫШ feeds',p:'Broken drums, crushed bass, shouts with no words. Its favourite food: it blows up on the drop, twice, and screams the chorus in red.',sc:['detonatsiya','delikates','krik']},
- {f:'04-lure',t:'ПРИМАНКА',r:'hyperpop',g:'cute, dark core · 160 bpm',who:'the mask',p:'Bells, an 808 and a bright melody, with two bars where the mask slips. A cute face goes on its visor and cracks on the hard hits.',sc:['primanka','kukla','dva-litsa']},
- {f:'05-nightcore',t:'ПОДДЕЛКА',r:'nightcore ×1.30',g:'sped up · 208 bpm',who:'the forgery',p:'The cute part itself, played ×1.30 faster, the way a nightcore edit is made. It knows a fake when it hears one.',sc:['poddelka','konfetti']},
- {f:'06-drop',t:'ПЕРЕМОТКА',r:'dubstep',g:'half-time drop · 140 bpm',who:'rewind, then the maw',p:'The tape runs backwards into a wobble drop. The blast rewinds, the rows fly apart, and it eats the copy of him.',sc:['peremotka','pitch','past']},
- {f:'07-epic',t:'КАДР',r:'epic',g:'orchestral · 90 bpm',who:'ДЕМОН comes back',p:'Strings, choir, timpani, brass. The changeling leaves for the big moment: the frame freezes and ДЕМОН says «ВОТ ОНО.».',sc:['kadr','ogon']},
- {f:'08-outro',t:'ГНИЛЬ',r:'rot',g:'tape decay · 80 bpm',who:'it rots off',p:'The opening melody as a tape loop that wears down on every pass. On calm songs the changeling rots off him.',sc:['gnil','proval']}
+ {f:'01-calm',t:'ПРИВАЛ',r:'prival',g:'ambient · rain · 80 bpm',who:'ДЕМОН alone',b:['calm · ДЕМОН','dim'],img:'hero-demon',feed:-.004,calm:1,p:'Rain, slow pads, a few bells. The changeling leaves on calm songs: he listens, and the rain shows in his visor.',sc:['hero-demon']},
+ {f:'02-build',t:'ЧУЕТ',r:'chuet',g:'build · 140 bpm',who:'ПОДМЕНЫШ arrives',b:['it arrives','red'],img:'zarazhenie',feed:.006,p:'A snare roll speeding up, a riser, then one beat of silence. It takes his place and smells the drop coming.',sc:['zarazhenie','chuet','smena']},
+ {f:'03-deli',t:'ДЕЛИКАТЕС',r:'delikates',g:'industrial noise · 140 bpm',who:'ПОДМЕНЫШ feeds',b:['summons it','red'],img:'detonatsiya',feed:.014,hard:1,p:'Broken drums, crushed bass, shouts with no words. Its favourite food: it blows up on the drop, twice, and screams the chorus in red.',sc:['detonatsiya','delikates','krik']},
+ {f:'04-lure',t:'ПРИМАНКА',r:'primanka',g:'cute, dark core · 160 bpm',who:'the mask',b:['mask','pink'],img:'primanka',feed:.004,p:'Bells, an 808 and a bright melody, with two bars where the mask slips. A cute face goes on its visor and cracks on the hard hits.',sc:['primanka','kukla','dva-litsa']},
+ {f:'05-nightcore',t:'ПОДДЕЛКА',r:'poddelka',g:'sped up · 208 bpm',who:'the forgery',b:['×1.30','rust'],img:'poddelka',feed:.008,p:'The cute part itself, played ×1.30 faster, the way a nightcore edit is made. It knows a fake when it hears one.',sc:['poddelka','konfetti']},
+ {f:'06-drop',t:'ПЕРЕМОТКА',r:'peremotka',g:'half-time drop · 140 bpm',who:'rewind, then the maw',b:['the drop','red'],img:'peremotka',feed:.012,hard:1,p:'The tape runs backwards into a wobble drop. The blast rewinds, the rows fly apart, and it eats the copy of him.',sc:['peremotka','pitch','past']},
+ {f:'07-epic',t:'КАДР',r:'kadr',g:'orchestral · 90 bpm',who:'ДЕМОН comes back',b:['epic · ДЕМОН','violet'],img:'kadr',feed:-.003,calm:1,p:'Strings, choir, timpani, brass. The changeling leaves for the big moment: the frame freezes and ДЕМОН says «ВОТ ОНО.».',sc:['kadr','ogon']},
+ {f:'08-outro',t:'ГНИЛЬ',r:'gnil',g:'tape decay · 80 bpm',who:'it rots off',b:['rot','dim'],img:'gnil',feed:-.005,calm:1,p:'The opening melody as a tape loop that wears down on every pass. On calm songs the changeling rots off him.',sc:['gnil','proval']}
 ];
-const GLOSS=[['ДЕМОН','demon','the violet one who listens'],['ПОДМЕНЫШ','podmenysh','the changeling'],['ШУМ','shum','noise; the maker'],['ЗАРАЖЕНИЕ','zarazhenie','infection, the way in'],
- ['СМЕНА','smena','the change'],['ГНИЛЬ','gnil','rot'],['ЧУЕТ','chuet','it smells it'],['ДЕТОНАЦИЯ','detonatsiya','detonation'],['ДЕЛИКАТЕС','delikates','delicacy'],
+const GLOSS=[['ДЕМОН','demon','the violet one who listens'],['ПОДМЕНЫШ','podmenysh','the changeling'],['ШУМ','shum','noise; the maker'],['НЕ ОН','ne on','not him'],['ЗАРАЖЕНИЕ','zarazhenie','infection, the way in'],
+ ['СМЕНА','smena','the change'],['ГНИЛЬ','gnil','rot'],['ЧУЕТ','chuet','it smells it'],['ДУША ВОН','dusha von','the soul leaves'],['ДЕТОНАЦИЯ','detonatsiya','detonation'],['СБОРКА','sborka','reassembly'],['ДЕЛИКАТЕС','delikates','delicacy'],
  ['КРИК','krik','scream'],['ПРИМАНКА','primanka','lure, bait'],['КУКЛА','kukla','doll'],['ДВА ЛИЦА','dva litsa','two faces'],['ПОДДЕЛКА','poddelka','forgery'],
  ['ПЕРЕМОТКА','peremotka','rewind'],['ПИТЧ','pitch','pitch'],['КОНФЕТТИ','konfetti','confetti'],['ПАСТЬ','past\'','maw'],['ПРОВАЛ','proval','failure'],
- ['КАДР','kadr','frame'],['ОГОНЬ','ogon\'','fire'],['ВОТ ОНО.','vot ono','this is it'],['НЕ ОН','ne on','not him']];
-const $=s=>document.querySelector(s), gif=n=>`assets/gifs/${n}.gif`;
-// gallery
+ ['ГОЛОД','golod','hunger'],['ИЗГНАТЬ','izgnat\'','banish'],['СКАН','skan','scan'],['КАДР','kadr','frame'],['ОГОНЬ','ogon\'','fire'],['ВОТ ОНО.','vot ono','this is it']];
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], gif=n=>`assets/gifs/${n}.gif`;
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rnd=(a,b)=>a+Math.random()*(b-a), ri=(a,b)=>Math.floor(rnd(a,b+1)), pick=a=>a[Math.floor(Math.random()*a.length)], chance=p=>Math.random()<p;
+const GLY='ПОДМЕНЫШНЕОНГОЛОДЖЁЩЯЮЭЪФЦЧБДЛИЙ0123456789ABCDEF▚▞▓';
+const TICK=83; // 12 fps: the changeling's frame rate for every effect on the page
+const store={get(k){try{return sessionStorage.getItem(k)}catch(e){return null}},set(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------- bus: kicks, real (from the loops, ВПЕРЕДИ: 60 ms early) or idle ---------- */
+const bus={subs:[],on(f){this.subs.push(f)},kick(s){this.subs.forEach(f=>f(s))},audio:false,level:0,part:null};
+
+/* ---------- tiny GIF decoder (so the page can take the red out of its body) ---------- */
+function lzw(mcs,data,npix){const out=new Uint8Array(npix),clear=1<<mcs,eoi=clear+1;let size=mcs+1,mask=(1<<size)-1,next=eoi+1;
+ const pre=new Int16Array(4096),suf=new Uint8Array(4096),stk=new Uint8Array(4097);for(let i=0;i<clear;i++){pre[i]=-1;suf[i]=i}
+ let old=-1,first=0,bits=0,acc=0,op=0,dp=0;
+ while(op<npix){while(bits<size){if(dp>=data.length)return out;acc|=data[dp++]<<bits;bits+=8}
+  let code=acc&mask;acc>>>=size;bits-=size;
+  if(code===clear){size=mcs+1;mask=(1<<size)-1;next=eoi+1;old=-1;continue}
+  if(code===eoi)break;
+  if(old===-1){out[op++]=suf[code];old=code;first=code;continue}
+  const cin=code;let sp=0;if(code>=next){stk[sp++]=first;code=old}
+  while(code>=clear){stk[sp++]=suf[code];code=pre[code]}
+  first=suf[code];stk[sp++]=first;while(sp>0&&op<npix)out[op++]=stk[--sp];
+  if(next<4096){pre[next]=old;suf[next]=first;next++;if(next===(1<<size)&&size<12){size++;mask=(1<<size)-1}}
+  old=cin}
+ return out}
+function decodeGIF(buf){const d=new Uint8Array(buf);let p=6;const u16=()=>{const v=d[p]|(d[p+1]<<8);p+=2;return v};
+ const W=u16(),H=u16(),pk=d[p++];p+=2;let gct=null;if(pk&0x80){const n=3*(1<<((pk&7)+1));gct=d.subarray(p,p+n);p+=n}
+ let cv=new Uint8ClampedArray(W*H*4),frames=[],disp=0,delay=4,tr=-1;
+ while(p<d.length){const b=d[p++];if(b===0x3B)break;
+  if(b===0x21){const l=d[p++];if(l===0xF9){p++;const f=d[p++];disp=(f>>2)&7;delay=u16();tr=(f&1)?d[p]:-1;p+=2;continue}
+   while(true){const s=d[p++];if(!s)break;p+=s}continue}
+  if(b===0x2C){const x=u16(),y=u16(),w=u16(),h=u16(),f=d[p++];let ct=gct;if(f&0x80){const n=3*(1<<((f&7)+1));ct=d.subarray(p,p+n);p+=n}
+   const il=f&0x40,mcs=d[p++],parts=[];let len=0;while(true){const s=d[p++];if(!s)break;parts.push(d.subarray(p,p+s));p+=s;len+=s}
+   const data=new Uint8Array(len);let o=0;for(const c of parts){data.set(c,o);o+=c.length}
+   const idx=lzw(mcs,data,w*h),prev=disp===3?cv.slice():null;
+   const rows=[];if(il){for(const [s,st] of [[0,8],[4,8],[2,4],[1,2]])for(let r=s;r<h;r+=st)rows.push(r)}else for(let r=0;r<h;r++)rows.push(r);
+   for(let k=0;k<h;k++){const ry=y+rows[k];if(ry>=H)continue;for(let c=0;c<w;c++){const i=idx[k*w+c];if(i===tr)continue;const rx=x+c;if(rx>=W)continue;const q=(ry*W+rx)*4;cv[q]=ct[i*3];cv[q+1]=ct[i*3+1];cv[q+2]=ct[i*3+2];cv[q+3]=255}}
+   frames.push({px:cv.slice(),ms:Math.max(2,delay)*10});
+   if(disp===2){for(let r=y;r<y+h&&r<H;r++)for(let c=x;c<x+w&&c<W;c++)cv[(r*W+c)*4+3]=0}else if(disp===3&&prev)cv=prev;
+   disp=0;tr=-1}}
+ return {w:W,h:H,frames}}
+const gifCache={};
+function loadGIF(n){return gifCache[n]=gifCache[n]||fetch(gif(n)).then(r=>r.arrayBuffer()).then(decodeGIF)}
+
+/* ---------- Sprite: draws a decoded GIF with the changeling's effects ---------- */
+const STAGE=[0x2B,0x1C,0x21], VIOLET=[0x16,0x12,0x2E];
+class Sprite{
+ constructor(cv,g){this.cv=cv;this.ctx=cv.getContext('2d');this.g=g;this.w=g.w;this.h=g.h;this.cell=6;this.t0=performance.now();this.fx={m:'none'};
+  this.off=document.createElement('canvas');this.off.width=g.w;this.off.height=g.h;this.oc=this.off.getContext('2d');
+  this.soulC=document.createElement('canvas');this.soulC.width=g.w;this.soulC.height=g.h;this.sc=this.soulC.getContext('2d');
+  this.cls=[];this.cellCls=[];this.glyph=[];this.total=g.frames.reduce((a,f)=>a+f.ms,0);this.bgTo=null;this.noise=new Float32Array(g.w*g.h).map(()=>Math.random());}
+ frameAt(t,lag=0){let m=((t-lag)%this.total+this.total)%this.total;for(let i=0;i<this.g.frames.length;i++){m-=this.g.frames[i].ms;if(m<0)return i}return 0}
+ classify(i){if(this.cls[i])return this.cls[i];const px=this.g.frames[i].px,n=this.w*this.h,c=new Uint8Array(n);
+  for(let k=0;k<n;k++){const r=px[k*4],g=px[k*4+1],b=px[k*4+2],a=px[k*4+3];
+   if(!a||Math.abs(r-STAGE[0])+Math.abs(g-STAGE[1])+Math.abs(b-STAGE[2])<22||Math.abs(r-VIOLET[0])+Math.abs(g-VIOLET[1])+Math.abs(b-VIOLET[2])<10)c[k]=0;
+   else if(r>140&&r>g*2.2&&r>b*1.7)c[k]=2; else if(r+g+b>480)c[k]=3; else c[k]=1}
+  return this.cls[i]=c}
+ cells(i){if(this.cellCls[i])return this.cellCls[i];const c=this.classify(i),S=this.cell,cw=Math.ceil(this.w/S),ch=Math.ceil(this.h/S),o=new Uint8Array(cw*ch);
+  for(let cy=0;cy<ch;cy++)for(let cx=0;cx<cw;cx++){const n=[0,0,0,0];for(let y=cy*S;y<Math.min(this.h,cy*S+S);y++)for(let x=cx*S;x<Math.min(this.w,cx*S+S);x++)n[c[y*this.w+x]]++;
+   const body=n[1]+n[2]+n[3];o[cy*cw+cx]=body<S*S*.18?0:(n[2]>=n[1]*.5&&n[2]>=n[3]?2:(n[3]>n[1]?3:1))}
+  return this.cellCls[i]=o}
+ body(i,dropRed,rot){const src=this.g.frames[i].px,c=this.classify(i),im=this.oc.createImageData(this.w,this.h),d=im.data;d.set(src);
+  const bg=this.bgTo;
+  for(let k=0;k<c.length;k++){const q=k*4;
+   if(c[k]===0){if(bg){d[q]=bg[0];d[q+1]=bg[1];d[q+2]=bg[2]}continue}
+   if(dropRed&&c[k]===2){d[q]=0x24;d[q+1]=0x08;d[q+2]=0x10}
+   if(rot&&this.noise[k]<rot){d[q]=(bg||STAGE)[0];d[q+1]=(bg||STAGE)[1];d[q+2]=(bg||STAGE)[2]}}
+  this.oc.putImageData(im,0,0)}
+ soul(i){const src=this.g.frames[i].px,c=this.classify(i),im=this.sc.createImageData(this.w,this.h),d=im.data;
+  for(let k=0;k<c.length;k++)if(c[k]===2||c[k]===3){const q=k*4;d[q]=0xFF;d[q+1]=c[k]===3?0x8F:0x22;d[q+2]=c[k]===3?0xB1:0x44;d[q+3]=255}
+  this.sc.putImageData(im,0,0)}
+ draw(now){const ctx=this.ctx,CW=this.cv.width,CH=this.cv.height,t=now-this.t0,fx=this.fx,i=this.frameAt(t);
+  let s=Math.min(CW/this.w,CH/this.h);if(s>=1)s=Math.floor(s);const W=this.w*s,H=this.h*s;
+  ctx.setTransform(1,0,0,1,0,0);ctx.imageSmoothingEnabled=false;
+  const bgc=this.bgTo||STAGE;ctx.fillStyle=`rgb(${bgc})`;ctx.fillRect(0,0,CW,CH);ctx.translate(Math.round((CW-W)/2),Math.round((CH-H)/2));
+  if(fx.m==='soul'){const out=fx.k>=2&&fx.k<fx.back;this.body(i,out,0);ctx.drawImage(this.off,0,0,W,H);
+   if(fx.k<fx.back+3){const j=this.frameAt(t,fx.lag);this.soul(j);const [dx,dy]=fx.off;
+    (fx.trail||[]).forEach(([tx,ty],n)=>{ctx.globalAlpha=.18+n*.08;ctx.drawImage(this.soulC,tx*s,ty*s,W,H)});ctx.globalAlpha=fx.flick?0:1;ctx.drawImage(this.soulC,dx*s,dy*s,W,H);ctx.globalAlpha=1}
+   if(fx.flash){ctx.globalAlpha=.55;ctx.fillStyle='#F2DCE0';ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}
+   return}
+  if(fx.m==='rot'){this.body(i,false,fx.rot);ctx.drawImage(this.off,0,0,W,H);
+   const c=this.classify(i);ctx.fillStyle='#4C0D1C';for(let n=0;n<90;n++){const k=Math.floor(this.noise[(n*977+fx.k*131)%this.noise.length]*c.length);if(c[k]&&this.noise[k]<fx.rot){const x=k%this.w,y=(k/this.w|0)+fx.k*3;ctx.fillRect(x*s,y*s,s*2,s*2)}}return}
+  this.body(i,false,0);ctx.drawImage(this.off,0,0,W,H);
+  if(fx.m==='scan'||fx.m==='reveal'){const cc=this.cells(i),S=this.cell,cw=Math.ceil(this.w/S),line=fx.y;
+   ctx.font=`700 ${Math.round(S*s*1.05)}px "JetBrains Mono",monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
+   for(let cy=0;cy*S<this.h;cy++){const above=cy*S<line;if(fx.m==='scan'?!above:above)continue;
+    ctx.fillStyle=`rgb(${bgc})`;ctx.fillRect(0,cy*S*s,W,S*s+1);
+    for(let cx=0;cx<cw;cx++){const v=cc[cy*cw+cx];if(!v)continue;const key=cy*cw+cx;if(!this.glyph[key]||chance(.06))this.glyph[key]=pick(GLY);
+     ctx.fillStyle=v===2?'#FF2244':v===3?'#F2DCE0':'#8A5A66';ctx.fillText(this.glyph[key],(cx+.5)*S*s,(cy+.5)*S*s)}}
+   if(line>0&&line<this.h){ctx.fillStyle='#FF2244';ctx.fillRect(0,line*s-2,W,3);ctx.globalAlpha=.16;ctx.fillRect(0,line*s-26,W,24);ctx.globalAlpha=1}}
+  if(fx.m==='split'&&fx.k<3){ctx.globalAlpha=.35;ctx.drawImage(this.off,fx.dx*s,0,W,H);ctx.drawImage(this.off,-fx.dx*s,0,W,H);ctx.globalAlpha=1}}
+}
+
+/* ---------- the field: pixels going around the whole page, in snaps ---------- */
+const field=$('#field'),fctx=field.getContext('2d'),fxc=$('#fx'),xctx=fxc.getContext('2d');
+let VW=0,VH=0,CELL=4;
+function resize(){VW=innerWidth;VH=innerHeight;CELL=VW<600?3:4;[field,fxc].forEach(c=>{c.width=VW;c.height=VH})}
+resize();addEventListener('resize',()=>{resize();seed()});
+const COL={dust:['#4C0D1C','#4C0D1C','#5E1020','#881B22','#881B22','#C81E3F','#FF2244','#F2DCE0'],demon:['#2C2560','#3B3373','#4A3C8F','#7B4DFF','#9D7BFF','#8FD9A8']};
+let P=[],worms=[],rain=[],stuck=[],T=0,hop=0,mouse={x:-999,y:-999,vx:0,vy:0,t:0};
+function seed(){const gw=VW/CELL,gh=VH/CELL,n=Math.round(VW*VH/(VW<600?9000:7000));P=[];
+ for(let i=0;i<n;i++)P.push({x:ri(0,gw),y:ri(0,gh*1.6),k:chance(.28)?'drift':'dust',c:Math.random(),s:chance(.12)?2:1,trail:[]});
+ worms=[];for(let i=0;i<(VW<600?2:4);i++){const x=ri(0,gw),y=ri(0,gh);worms.push({x,y,d:ri(0,3),body:Array.from({length:ri(6,14)},()=>[x,y])})}}
+seed();
+addEventListener('pointermove',e=>{const now=performance.now(),dt=Math.max(16,now-mouse.t);mouse.vx=(e.clientX-mouse.x)/dt;mouse.vy=(e.clientY-mouse.y)/dt;mouse.x=e.clientX;mouse.y=e.clientY;mouse.t=now},{passive:true});
+const DIRS=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+function fieldTick(){const gw=Math.ceil(VW/CELL),gh=Math.ceil(VH/CELL),dm=document.documentElement.classList.contains('demon'),pal=dm?COL.demon:COL.dust;T++;
+ // ВПЕРЕДИ: the pixels flee where the cursor is going, not where it is
+ const ax=(mouse.x+mouse.vx*160)/CELL,ay=(mouse.y+mouse.vy*160)/CELL,h=hop;hop=0;
+ const sy=(scrollY*.22/CELL)|0;
+ fctx.clearRect(0,0,VW,VH);
+ for(const p of P){
+  if(p.k==='dust'){if(chance(dm?.18:.38))p.y-=1;if(chance(.12))p.x+=chance(.5)?1:-1;if(h)p.y-=ri(1,1+h)}
+  else{const a=Math.sin(p.x*.045+T*.021)*2.1+Math.cos(p.y*.038-T*.017)*2.1;const d=DIRS[((Math.round(a/(Math.PI/4))%8)+8)%8];
+   p.trail.unshift([p.x,p.y]);if(p.trail.length>3)p.trail.pop();if(chance(dm?.3:.55)){p.x+=d[0]*(1+h);p.y+=d[1]*(1+h)}}
+  const py=((p.y-sy)%(gh*1.6)+gh*1.6)%(gh*1.6);
+  const dx=p.x-ax,dy=py-ay;if(dx*dx+dy*dy<64){p.x+=Math.sign(dx||1)*2;p.y+=Math.sign(dy||1)*2}
+  if(p.x<0)p.x+=gw;if(p.x>gw)p.x-=gw;if(p.y<-gh*.3)p.y+=gh*1.6;
+  if(py>gh)continue;const ci=Math.min(pal.length-1,Math.floor(p.c*pal.length));
+  if(p.k==='drift'){fctx.fillStyle=pal[0];p.trail.forEach(([tx,ty])=>{const tyy=((ty-sy)%(gh*1.6)+gh*1.6)%(gh*1.6);fctx.fillRect(tx*CELL,tyy*CELL,CELL,CELL)})}
+  // ЗВЁЗДОЧКИ: a light pixel turns into a red eye for one frame
+  fctx.fillStyle=(ci===pal.length-1&&chance(.04))?'#FF2244':pal[ci];fctx.fillRect(p.x*CELL,py*CELL,CELL*p.s,CELL*p.s)}
+ if(!dm){for(const w of worms){const steps=1+(h?2:0);for(let s=0;s<steps;s++){if(chance(.16))w.d=(w.d+(chance(.5)?1:3))%4;const d=[[1,0],[0,1],[-1,0],[0,-1]][w.d];
+    w.x=(w.x+d[0]+gw)%gw;w.y=(w.y+d[1]+gh)%gh;w.body.unshift([w.x,w.y]);w.body.pop()}
+   w.body.forEach(([x,y],n)=>{fctx.fillStyle=n===0?'#FF2244':n<3?'#881B22':'#4C0D1C';fctx.fillRect(x*CELL,y*CELL,CELL,CELL)})}
+  // СБОЙ: pixel rain, frozen on kick frames
+  if(chance(bus.audio?.25:.07))rain.push({x:ri(0,gw),y:-3,v:ri(3,5)});
+  rain=rain.filter(r=>{if(!h)r.y+=r.v;fctx.fillStyle='#4C0D1C';fctx.fillRect(r.x*CELL,(r.y-3)*CELL,CELL,CELL*3);fctx.fillStyle='#FF2244';fctx.fillRect(r.x*CELL,r.y*CELL,CELL,CELL);return r.y<gh+4})
+  stuck.forEach(s=>{fctx.fillStyle=s.c;fctx.fillRect(s.x,s.y,CELL,CELL)})}}
+
+/* ---------- fx: arms, slabs, bursts (above the content, never clickable) ---------- */
+let arms=[],slabs=[],bursts=[];const A=8;
+function spawnArm(target){const side=ri(0,3),gw=Math.ceil(VW/A),gh=Math.ceil(VH/A);
+ let tx,ty;if(target){tx=target[0]/A|0;ty=target[1]/A|0}else{const els=$$('.tile,.stage,.card,h2.t,.pill,.film').filter(e=>{const r=e.getBoundingClientRect();return r.bottom>40&&r.top<VH-40&&r.width>0});
+  if(els.length&&chance(.75)){const e=pick(els),r=e.getBoundingClientRect();tx=(side===0?r.left:side===1?r.right:rnd(r.left,r.right))/A|0;ty=(side===2?r.top:side===3?r.bottom:rnd(r.top,r.bottom))/A|0;arms.grab=e}else{tx=mouse.x>0?mouse.x/A|0:ri(8,gw-8);ty=mouse.y>0?mouse.y/A|0:ri(8,gh-8)}}
+ const start=side===0?[-1,ri(2,gh-2)]:side===1?[gw,ri(2,gh-2)]:side===2?[ri(2,gw-2),-1]:[ri(2,gw-2),gh];
+ const path=[start];let [x,y]=start,guard=0;while((x!==tx||y!==ty)&&guard++<400){const dx=tx-x,dy=ty-y;
+  if(chance(.12)){if(Math.abs(dx)>Math.abs(dy))y+=chance(.5)?1:-1;else x+=chance(.5)?1:-1}else if(Math.random()<Math.abs(dx)/(Math.abs(dx)+Math.abs(dy)))x+=Math.sign(dx);else y+=Math.sign(dy);path.push([x,y])}
+ const el=arms.grab||null;arms.grab=null;arms.push({path,n:1,hold:ri(8,18),phase:'grow',el,out:chance(.5)?'cut':'back'})}
+function drawCell(ctx,x,y,s,edge,fill){ctx.fillStyle=edge;ctx.fillRect(x,y,s,s);ctx.fillStyle=fill;ctx.fillRect(x+2,y+2,s-4,s-4)}
+function fxTick(){xctx.clearRect(0,0,VW,VH);const dm=document.documentElement.classList.contains('demon');const edge=dm?'#9D7BFF':'#FF2244';
+ arms=arms.filter(a=>{if(a.phase==='grow'){a.n=Math.min(a.path.length,a.n+Math.max(ri(3,5),Math.ceil(a.path.length/ri(9,13))));if(a.n===a.path.length){a.phase='hold';if(a.el)a.el.classList.add('grab')}}
+  else if(a.phase==='hold'){if(--a.hold<=0){a.phase=a.out;if(a.el)a.el.classList.remove('grab')}}
+  else if(a.phase==='back'){a.n-=ri(4,7);if(a.n<=0)return false}else if(a.phase==='cut')return false;
+  const jit=a.phase==='hold'?a.path.map(()=>chance(.12)?ri(-2,2):0):null,B=A*2;
+  // outline pass, then the black flesh: one limb, red edge all round (the changeling's own grammar)
+  xctx.fillStyle=edge;for(let i=0;i<a.n;i++){const [x,y]=a.path[i];xctx.fillRect(x*A-2+(jit?jit[i]:0),y*A-2,B+4,B+4)}
+  xctx.fillStyle='#06060C';for(let i=0;i<a.n;i++){const [x,y]=a.path[i];xctx.fillRect(x*A+(jit?jit[i]:0),y*A,B,B)}
+  xctx.fillStyle='#4C0D1C';for(let i=5;i<a.n;i+=7){const [x,y]=a.path[i];xctx.fillRect(x*A+4,y*A+4,B-8,3)}
+  if(a.phase==='hold'||(a.phase==='grow'&&a.n>=a.path.length-1)){const [x,y]=a.path[a.n-1],[px,py]=a.path[Math.max(0,a.n-3)],dx=Math.sign(x-px),dy=Math.sign(y-py);
+   for(const sp of [-1,0,1]){const L=sp?3:4;for(let k=1;k<=L;k++){const cx=x+dx*(k+1)+(dy||!dx?0:0)+(dy?sp*(k):0)+(dx?0:0),cy=y+dy*(k+1)+(dx?sp*(k):0);
+     xctx.fillStyle=edge;xctx.fillRect(cx*A+A/2-2,cy*A+A/2-2,A+4,A+4);xctx.fillStyle=k===L?edge:'#06060C';xctx.fillRect(cx*A+A/2,cy*A+A/2,A,A)}}}
+  return true});
+ slabs=slabs.filter(s=>{xctx.fillStyle='#06060C';xctx.fillRect(s.x,s.y,s.w,s.h);xctx.fillStyle=edge;xctx.fillRect(s.x,s.y,s.w,2);if(s.h>14)xctx.fillRect(s.x,s.y+s.h-2,s.w,2);xctx.fillRect(s.x,s.y,2,s.h);
+  if(s.txt){xctx.font='700 12px "JetBrains Mono",monospace';xctx.fillStyle=edge;xctx.fillText(s.txt,s.x+10,s.y+s.h/2+4)}return --s.life>0});
+ bursts=bursts.filter(b=>{b.k++;for(const q of b.p){if(b.k<9){q.x+=q.vx;q.y+=q.vy}else if(b.k>12){const rx=q.ox-q.x,ry=q.oy-q.y;q.x+=Math.round(rx*.35);q.y+=Math.round(ry*.35)}
+   if(b.k>12&&chance(.08)&&stuck.length<6&&b.k===14){stuck.push({x:q.x,y:q.y,c:'#FF2244'})}
+   xctx.fillStyle=q.c;xctx.fillRect(q.x,q.y,q.s,q.s)}return b.k<24})}
+function slabStorm(n=ri(1,3)){for(let i=0;i<n;i++){const w=ri(60,Math.min(380,VW*.5)),h=pick([6,10,18,34,58]);slabs.push({x:ri(0,VW-w),y:ri(60,VH-h),w,h,life:ri(2,4),txt:h>30&&chance(.6)?pick(['НЕ ОН','0xДЕМ0Н','ПРОПУСК','▚▚ 4F 4E','ГОЛОД'])+'':''})}}
+function burst(x,y,n=150,cols){const b={k:0,p:[]};for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,v=rnd(6,34);b.p.push({x,y,ox:x+ri(-30,30),oy:y+ri(-30,30),vx:Math.round(Math.cos(a)*v),vy:Math.round(Math.sin(a)*v),s:pick([4,4,6,8]),c:pick(cols||['#FF2244','#FF2244','#881B22','#06060C','#F2DCE0','#C81E3F'])})}bursts.push(b)}
+function shiftPage(){const m=$('main');m.classList.add(chance(.5)?'shift':'shift2');setTimeout(()=>m.classList.remove('shift','shift2'),TICK*ri(1,2))}
+
+/* ---------- one wrong letter in every title; sometimes the whole word turns ---------- */
+function corrupt(el){if(!el||el.dataset.busy)return;el.dataset.busy=1;const html=el.innerHTML,txt=el.textContent;let k=0;
+ const iv=setInterval(()=>{el.textContent=[...txt].map(c=>c===' '?' ':chance(.55)?pick(GLY):c).join('');if(++k>=ri(2,4)){clearInterval(iv);el.innerHTML=html;delete el.dataset.busy}},TICK)}
+function forge(el,from,to,cb){let i=0;el.textContent=from;const iv=setInterval(()=>{i++;el.textContent=to.slice(0,i)+from.slice(i);if(i>=Math.max(from.length,to.length)){clearInterval(iv);cb&&cb()}},TICK*1.4)}
+
+/* ---------- hero: the soul leaves, the scan shows code instead of it ---------- */
+let hero=null,heroDemon=null,heroCur=null,heroMode='podmenysh';
+const heroCv=$('#heroCv'),heroImg=$('#heroImg'),heroFx=$('#heroFx'),heroState=$('#heroState'),heroTag=$('#heroTag');
+function setState(ru,en){heroState.textContent=ru;heroState.nextSibling.textContent=' · '+en;$('#hs').textContent=ru+' · '+en}
+function soulOut(){if(!heroCur||heroCur.fx.m!=='none'||heroMode!=='podmenysh')return;const s=heroCur;heroFx.textContent='> ДУША ВОН · the soul leaves';
+ const path=[[0,0],[1,-1],[0,-2],[2,-4],[-1,-6],[3,-9],[1,-12],[4,-14],[2,-16]].map(([x,y])=>[x*3,y*3]);
+ s.fx={m:'soul',k:0,off:[0,0],lag:ri(200,700),back:ri(14,22),trail:[]};
+ const iv=setInterval(()=>{const f=s.fx;f.k++;if(f.k<4)f.off=[ri(-1,1)*2,0];
+  else if(f.k<f.back){const o=path[Math.min(path.length-1,f.k-4)];f.trail=[f.off,...f.trail].slice(0,3);f.off=[o[0]+(chance(.3)?ri(-3,3):0),o[1]];f.flick=chance(.15)}
+  else if(f.k<f.back+3){f.trail=[];f.off=[Math.round(f.off[0]*.4),Math.round(f.off[1]*.4)];f.flick=false}
+  else if(f.k===f.back+3){f.flash=1;f.off=[0,0];bus.kick(1)}
+  else{clearInterval(iv);s.fx={m:'none'};heroFx.textContent='> СБОРКА · back together'}},TICK)}
+function scan(){if(!heroCur||heroCur.fx.m!=='none'||heroMode!=='podmenysh')return;const s=heroCur;heroFx.textContent='> СКАН · scanning: no body found';s.fx={m:'scan',y:0};s.glyph=[];
+ let hold=0;const iv=setInterval(()=>{const f=s.fx;if(f.y<s.h+6){f.y+=ri(6,14)}else if(++hold>ri(10,16)){clearInterval(iv);s.fx={m:'split',k:0,dx:4};let k=0;const j=setInterval(()=>{s.fx.k=++k;if(k>3){clearInterval(j);s.fx={m:'none'};heroFx.textContent='> НЕ ОН · it was there'}},TICK)}},TICK)}
+async function initHero(){if(RM)return;try{hero=new Sprite(heroCv,await loadGIF('hero-podmenysh'));}catch(e){return}
+ heroCv.width=642;heroCv.height=720;heroCur=hero;heroCv.hidden=false;heroImg.style.visibility='hidden';
+ (function loop(now){heroCur.draw(now);requestAnimationFrame(loop)})(performance.now());
+ let n=0;setInterval(()=>{if(document.hidden)return;(n++%2?scan:soulOut)()},7600);setTimeout(soulOut,2400);
+ loadGIF('hero-demon').then(g=>{heroDemon=new Sprite(heroCv,g)}).catch(()=>{})}
+const NAME={h1:$('h1').innerHTML,kick:$('.kick').innerHTML};function names(d){$('h1').innerHTML=d?'ДЕМОН':NAME.h1;$('h1').setAttribute('aria-label',d?'ДЕМОН':'ПОДМЕНЫШ');$('.kick').innerHTML=d?'<s>ПОДМЕНЫШ</s> → ОН · him, for now':NAME.kick}
+function toDemon(why){if(heroMode==='demon')return;heroMode='demon';setTimeout(()=>heroMode==='demon'&&names(1),TICK*10);document.documentElement.classList.add('demon');setState('ЖДЁТ','it waits');heroTag.textContent='он';
+ heroFx.textContent='> '+(why||'ГНИЛЬ · it rots off');
+ if(heroCur&&heroDemon){const s=heroCur;s.fx={m:'rot',k:0,rot:0};let k=0;const iv=setInterval(()=>{s.fx.k=++k;s.fx.rot=k/10;if(k>=10){clearInterval(iv);s.fx={m:'none'};heroDemon.bgTo=VIOLET;heroDemon.cv=heroCv;heroCur=heroDemon;heroFx.textContent='> ДЕМОН · he is back for now'}},TICK)}
+ else heroImg.src=gif('hero-demon')}
+function toPod(){if(heroMode!=='demon')return;heroMode='podmenysh';const r=$('#heroStage').getBoundingClientRect();
+ burst(r.left+r.width/2,r.top+r.height/2,170);slabStorm(3);shiftPage();
+ let k=0;const iv=setInterval(()=>{k++;// ДВА ЛИЦА: hard flicker between them, then the infection holds
+  if(k%2)document.documentElement.classList.toggle('demon');if(hero&&heroDemon)heroCur=k%2?hero:heroDemon;
+  if(k>=5){clearInterval(iv);document.documentElement.classList.remove('demon');if(hero)heroCur=hero;else heroImg.src=gif('hero-podmenysh');heroTag.textContent='не он';names(0);heroFx.textContent='> ЗАРАЖЕНИЕ · it is back';setState('СМОТРИТ','it watches')}},TICK)}
+
+/* ---------- hunger (ГОЛОД) and banishing ---------- */
+let hunger=.55,resist=0,demonTimer=null,lastBoom=0;
+const hm=$('#hm');for(let i=0;i<12;i++)hm.appendChild(document.createElement('i'));
+function drawHunger(){[...hm.children].forEach((c,i)=>c.classList.toggle('on',i<Math.round(hunger*12)))}
+drawHunger();
+function feed(v){hunger=Math.max(0,Math.min(1,hunger+v));drawHunger();
+ if(hunger>=1&&performance.now()-lastBoom>30000){lastBoom=performance.now();hunger=.62;const r=$('#heroStage').getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,220);slabStorm(4);shiftPage();setState('РЕКОРД','record');setTimeout(()=>heroMode==='podmenysh'&&setState(bus.audio?'ЖРЁТ':'СМОТРИТ',bus.audio?'it feeds':'it watches'),2400)}
+ if(hunger<=0&&heroMode==='podmenysh'){toDemon('ГОЛОД · it starved and left');clearTimeout(demonTimer);demonTimer=setTimeout(()=>{hunger=.4;drawHunger();toPod()},20000)}}
+setInterval(()=>{if(!bus.audio&&heroMode==='podmenysh')feed(-1/12/15)},2000);
+function banish(){const hud=$('#hud');if(heroMode==='demon')return;
+ if(resist<1){resist++;hud.classList.remove('shake');void hud.offsetWidth;hud.classList.add('shake');setState('НЕ УЙДУ','it holds on');
+  const r=hud.getBoundingClientRect();spawnArm([r.left+20,r.top+10]);spawnArm([r.right-20,r.top+10]);slabStorm(2);corrupt($('#banish'));
+  setTimeout(()=>heroMode==='podmenysh'&&setState('СМОТРИТ','it watches'),2600);return}
+ resist=0;toDemon('ИЗГНАТЬ · banished');clearTimeout(demonTimer);demonTimer=setTimeout(toPod,15000)}
+$('#banish').onclick=banish;$('#hudBan').onclick=banish;
+
+/* ---------- the clock: everything snaps on 12 fps ticks ---------- */
+let lastT=0,nextGlitch=performance.now()+4000,idleBeat=performance.now()+800;
+function master(now){if(now-lastT>=TICK){lastT=now;if(!RM){fieldTick();fxTick()}
+  if(!RM&&now>nextGlitch){nextGlitch=now+(bus.audio?rnd(2500,6000):rnd(5000,11000));const dm=heroMode==='demon',r=Math.random();
+   if(dm){if(r<.4)corrupt(pick($$('h2.t')))}else if(r<.36)spawnArm();else if(r<.6)slabStorm();else if(r<.86)corrupt(pick($$('h2.t').filter(e=>{const b=e.getBoundingClientRect();return b.top<VH&&b.bottom>0}))||$('h1'));else shiftPage()}
+  if(!bus.audio&&now>idleBeat){idleBeat=now+rnd(700,1500);hop=1}}
+ requestAnimationFrame(master)}
+bus.on(s=>{hop=s>.8?2:1;if(heroCur&&heroCur.fx.m==='none'&&s>.85&&chance(.5)){heroCur.fx={m:'split',k:0,dx:pick([3,4,6])};let k=0;const iv=setInterval(()=>{if(heroCur.fx.m!=='split'){clearInterval(iv);return}heroCur.fx.k=++k;if(k>2){clearInterval(iv);heroCur.fx={m:'none'}}},TICK)}
+ if(s>.95&&chance(.35))shiftPage();if(s>.9&&chance(.12))slabStorm(1)});
+requestAnimationFrame(master);
+
+/* ---------- nav eye (ВЗГЛЯД) and signature ---------- */
+const eyeI=$('#eye i');addEventListener('pointermove',e=>{const r=$('#eye').getBoundingClientRect();const dx=e.clientX-(r.left+r.width/2);eyeI.style.left=(13+Math.max(-9,Math.min(9,Math.round(dx/60))))+'px'},{passive:true});
+function signature(){const el=$('#sig');forge(el,'ДЕМОН & ПОДМЕНЫШ','ПОДМЕНЫШ ⇢ НЕ ОН',()=>{el.innerHTML='ПОДМЕНЫ<span class="w">Щ</span>'})}
+
+/* ---------- ticker ---------- */
+const words=['НЕ ОН','ГОЛОД','ДЕТОНАЦИЯ','ДУША ВОН','ПРИМАНКА','ПОДДЕЛКА ×1.30','ПАСТЬ','СБОРКА','ШУМ','СКАН'];
+$('#tick').innerHTML=(words.map(w=>w).join('<em>✕</em>')+'<em>✕</em>').repeat(4);
+
+/* ---------- gateway (ДОСМОТР) ---------- */
+const gate=$('#gate');
+let entering=false;function enter(){if(!gate.classList.contains('on')||entering)return;entering=true;store.set('shum-in','1');$('#gateLog').innerHTML='&gt; <b>ПРОХОДИ</b> · go through';
+ const r=$('#enter').getBoundingClientRect();if(!RM)burst(r.left+r.width/2,r.top+r.height/2,200);
+ let k=0;const iv=setInterval(()=>{k++;gate.classList.toggle('cut1',k===1);gate.classList.toggle('cut2',k===2);if(k>=3){clearInterval(iv);gate.classList.remove('on','cut1','cut2');document.body.classList.remove('gated');signature()}},TICK*1.5)}
+async function initGate(){const skip=store.get('shum-in')||location.hash;if(skip){signature();return}
+ gate.classList.add('on');document.body.classList.add('gated');$('#enter').focus();
+ $('#enter').onclick=enter;addEventListener('keydown',e=>{if(gate.classList.contains('on')&&(e.key==='Escape'||e.key==='Enter'))enter()});
+ const log=$('#gateLog'),lines=['&gt; scanning visitor_','&gt; scanning visitor ▮▮▯▯','&gt; body: <b>НЕ ОН</b> · not him','&gt; ДОСМОТР · you may pass'];let li=0;const lv=setInterval(()=>{if(!gate.classList.contains('on')){clearInterval(lv);return}log.innerHTML=lines[li=Math.min(lines.length-1,li+1)]},900);
+ const cv=$('#gateCv');try{const g=await loadGIF('hero-podmenysh');const s=new Sprite(cv,g);s.bgTo=[0x0A,0x04,0x06];cv.width=g.w*2;cv.height=g.h*2;s.fx={m:'reveal',y:RM?g.h+10:0};s.glyph=[];
+  let hold=0;(function loop(now){if(!gate.classList.contains('on'))return;s.draw(now);requestAnimationFrame(loop)})(performance.now());
+  const iv=setInterval(()=>{if(!gate.classList.contains('on')){clearInterval(iv);return}if(s.fx.y<g.h+8)s.fx.y+=ri(4,10);else if(++hold>30){hold=0;s.fx.y=0}},TICK)}catch(e){cv.hidden=true}}
+
+/* ---------- gallery (carousels) + lightbox ---------- */
 const gal=$('#gal');
-GROUPS.forEach(([g,ns])=>{const w=document.createElement('div');w.className='gal-g';w.innerHTML=`<h3>${g}</h3><div class="gal"></div>`;
- ns.forEach(n=>{const b=document.createElement('button');b.innerHTML=`<div class="st"><img class="px" loading="lazy" src="${gif(n)}" alt="${SC[n][0]}"></div><div class="c"><b>${SC[n][0]}</b>${SC[n][1]}</div>`;
-  b.onclick=()=>openLb(n);w.querySelector('.gal').appendChild(b)});gal.appendChild(w)});
-const lb=$('#lb');function openLb(n){$('#lb-i').src=gif(n);$('#lb-i').alt=SC[n][0];$('#lb-p').innerHTML=`<b style="color:var(--ink)">${SC[n][0]}</b><br>${SC[n][1]}`;lb.classList.add('on');$('#lb-x').focus()}
-$('#lb-x').onclick=()=>lb.classList.remove('on');lb.onclick=e=>{if(e.target===lb)lb.classList.remove('on')};addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('on')});
-// glossary
-$('#gloss').innerHTML=GLOSS.map(([a,b,c])=>`<tr><td>${a} <span class="rom">${b}</span></td><td>${c}</td></tr>`).join('');
-// genre player: gapless loops through Web Audio (opus where the browser decodes it, mp3 otherwise)
-let ac=null,src=null,an=null,cur=0,playing=false;const cache={};
+GROUPS.forEach(([g,ns])=>{const w=document.createElement('div');w.className='gg';w.innerHTML=`<div class="gg-h"><h3>${g}</h3><span>${String(ns.length).padStart(2,'0')} scenes</span></div><div class="row"></div>`;
+ ns.forEach(n=>{const b=document.createElement('button');const [ru,ro,tx]=SC[n];b.setAttribute('aria-label',`${ru}: ${tx}`);
+  b.innerHTML=`<div class="st"><img class="px" loading="lazy" src="${gif(n)}" alt=""></div><div class="c1"><span>${ru}</span><i>${ro}</i></div><div class="c2">${tx}</div>`;
+  b.onclick=()=>openLb(n);w.querySelector('.row').appendChild(b)});gal.appendChild(w)});
+const lb=$('#lb');let lbFrom=null;
+function openLb(n){lbFrom=document.activeElement;const [ru,ro,tx]=SC[n];$('#lb-i').src=gif(n);$('#lb-i').alt=ru;$('#lb-p').innerHTML=`<b>${ru}</b> <span class="rom">${ro}</span><br>${tx}`;lb.classList.add('on');$('#lb-x').focus()}
+function closeLb(){lb.classList.remove('on');lbFrom&&lbFrom.focus()}
+$('#lb-x').onclick=closeLb;lb.onclick=e=>{if(e.target===lb)closeLb()};addEventListener('keydown',e=>{if(e.key==='Escape'&&lb.classList.contains('on'))closeLb()});
+
+/* ---------- words: hover forges Cyrillic into Latin ---------- */
+$('#gloss').innerHTML=GLOSS.map(([a,b,c])=>`<div class="wd"><b data-ru="${a}" data-ro="${b}">${a}</b><i>${b}</i><span class="dots"></span><span>${c}</span></div>`).join('');
+$$('#gloss b').forEach(el=>{el.onmouseenter=()=>{if(!el.dataset.f){el.dataset.f=1;forge(el,el.dataset.ru,el.dataset.ro.toUpperCase(),()=>setTimeout(()=>{el.textContent=el.dataset.ru;delete el.dataset.f},900))}}});
+
+/* ---------- genre player: gapless loops, kicks found in the audio, fired 60 ms early ---------- */
+let ac=null,src=null,an=null,cur=0,playing=false,t0=0,lastPos=0;const cache={},onsets={};
 const useOpus=(()=>{const a=document.createElement('audio');return !!a.canPlayType('audio/ogg; codecs=opus')})();
+const gm=$('#g-m');for(let i=0;i<20;i++)gm.appendChild(document.createElement('i'));
+function findKicks(b){const x=b.getChannelData(0),sr=b.sampleRate,a=1-Math.exp(-2*Math.PI*130/sr),hopN=512;let lp=0;const e=[];
+ for(let i=0;i<x.length;i+=hopN){let s=0;for(let j=i;j<Math.min(x.length,i+hopN);j++){lp+=a*(x[j]-lp);s+=Math.abs(lp)}e.push(s/hopN)}
+ const mx=Math.max(...e)||1,out=[];let last=-1e9;
+ for(let i=8;i<e.length;i++){let m=0;for(let k=i-8;k<i;k++)m+=e[k];m/=8;const t=i*hopN/sr;if(e[i]>m*1.5&&e[i]>mx*.22&&t-last>.16){out.push([t,Math.min(1,e[i]/mx)]);last=t}}
+ return out}
 async function buf(i){const key=PARTS[i].f;if(cache[key])return cache[key];ac=ac||new (window.AudioContext||window.webkitAudioContext)();
  const get=async ext=>{const r=await fetch(`assets/loops/${key}.${ext}`);return ac.decodeAudioData(await r.arrayBuffer())};
- try{cache[key]=await get(useOpus?'opus':'mp3')}catch(e){cache[key]=await get('mp3')}return cache[key]}
-function stop(){if(src){try{src.stop()}catch(e){}src=null}playing=false;$('#g-play').textContent='▶ Loop it';$('#g-m').style.width='0'}
+ try{cache[key]=await get(useOpus?'opus':'mp3')}catch(e){cache[key]=await get('mp3')}onsets[key]=findKicks(cache[key]);return cache[key]}
+function stop(){if(src){try{src.stop()}catch(e){}src=null}playing=false;bus.audio=false;$('#g-play').textContent='▶ loop it';[...gm.children].forEach(c=>c.classList.remove('on'));
+ if(heroMode==='demon'&&!demonTimer)toPod();if(heroMode==='podmenysh')setState('СМОТРИТ','it watches')}
 async function play(){const v=document.querySelector('video');if(v&&!v.paused)v.pause();
- const b=await buf(cur);if(ac.state==='suspended')await ac.resume();stop();
- an=an||ac.createAnalyser();an.fftSize=512;an.connect(ac.destination);src=ac.createBufferSource();src.buffer=b;src.loop=true;src.connect(an);src.start();
- playing=true;$('#g-play').textContent='■ Stop';meter()}
-function meter(){if(!playing)return;const d=new Uint8Array(an.fftSize);an.getByteTimeDomainData(d);let m=0;for(const x of d)m=Math.max(m,Math.abs(x-128));
- $('#g-m').style.width=Math.min(100,m/128*140)+'%';requestAnimationFrame(meter)}
+ const b=await buf(cur);if(ac.state==='suspended')await ac.resume();if(src){try{src.stop()}catch(e){}}
+ an=an||ac.createAnalyser();an.fftSize=512;an.connect(ac.destination);src=ac.createBufferSource();src.buffer=b;src.loop=true;src.connect(an);t0=ac.currentTime+.05;src.start(t0);lastPos=-0.06;
+ playing=true;bus.audio=true;$('#g-play').textContent='■ stop';const p=PARTS[cur];
+ clearTimeout(demonTimer);demonTimer=null;
+ if(p.calm){setTimeout(()=>{if(playing&&PARTS[cur].calm)toDemon(p.f==='08-outro'?'ГНИЛЬ · it rots off':'calm song · it leaves')},1500)}else{toPod();setState('ЖРЁТ','it feeds')}
+ loop()}
+function loop(){if(!playing)return;const d=new Uint8Array(an.fftSize);an.getByteTimeDomainData(d);let m=0;for(const x of d)m=Math.max(m,Math.abs(x-128));
+ const lv=Math.min(1,m/128*1.5);bus.level=lv;[...gm.children].forEach((c,i)=>c.classList.toggle('on',i<Math.round(lv*20)));
+ const p=PARTS[cur],b=cache[p.f],ks=onsets[p.f]||[];if(b){const dur=b.duration,pos=((ac.currentTime-t0)%dur+dur)%dur,LEAD=.06;
+  let A0=lastPos+LEAD,A1=pos+LEAD;if(pos<lastPos)A1+=dur;
+  for(const [t,k] of ks){if((t>A0&&t<=A1)||(t+dur>A0&&t+dur<=A1)){bus.kick(k);feed(p.feed*k)}}
+  lastPos=pos}
+ requestAnimationFrame(loop)}
 $('#g-play').onclick=()=>playing?stop():play();
-function show(i){cur=i;const p=PARTS[i];document.querySelectorAll('.tab').forEach((t,k)=>{t.classList.toggle('on',k===i);t.setAttribute('aria-selected',k===i)});
+function show(i){cur=i;const p=PARTS[i];$$('.tile').forEach((t,k)=>{t.classList.toggle('on',k===i);t.setAttribute('aria-selected',k===i)});
  $('#g-t').innerHTML=`${p.t} <span class="rom">${p.r}</span>`;$('#g-who').textContent=`${p.g} · ${p.who}`;$('#g-p').textContent=p.p;
- $('#g-sc').innerHTML=p.sc.map(n=>`<figure><img class="px" src="${gif(n)}" alt="${SC[n][0]}"><figcaption>${SC[n][0]}</figcaption></figure>`).join('');
+ $('#g-sc').innerHTML=p.sc.map(n=>`<figure><img class="px" loading="lazy" src="${gif(n)}" alt="${SC[n][0]}"><figcaption>${SC[n][0]}</figcaption></figure>`).join('');
  if(playing)play()}
-const tabs=$('#tabs');PARTS.forEach((p,i)=>{const b=document.createElement('button');b.className='tab';b.setAttribute('role','tab');
- b.innerHTML=`<span class="n">${String(i+1).padStart(2,'0')}</span><br>${p.t}<small>${p.r}</small>`;b.onclick=()=>show(i);tabs.appendChild(b)});
+const tabs=$('#tabs');PARTS.forEach((p,i)=>{const b=document.createElement('button');b.className='tile';b.setAttribute('role','tab');b.setAttribute('aria-label',`${p.t}, ${p.r}: ${p.b[0]}`);
+ b.innerHTML=`<img class="px" loading="lazy" src="${gif(p.img)}" alt=""><span class="badge ${p.b[1]}">${p.b[0]}</span><span class="n">${String(i+1).padStart(2,'0')}</span><span class="lab"><small>${p.t}</small><b>${p.r}</b></span>`;
+ b.onclick=()=>show(i);tabs.appendChild(b)});
 show(0);
-document.querySelector('video').addEventListener('play',stop);
+document.querySelector('video').addEventListener('play',()=>{if(playing)stop()});
+
+/* ---------- footer doodle wall (original pixel motifs, the shirtz idea in its own grammar) ---------- */
+(function doodle(){const M={head:['1.......1','11.....11','.1111111.','.1111111.','.11...11.','.1111111.','..1...1..'],eye:['.11111.','1111111','111.111','1111111','.11111.'],
+ heart:['11.11','11111','1.111','.111.','..1..'],star:['..1..','..1..','11111','..1..','..1..'],drop:['.1.','.1.','111','111','.1.'],x:['1...1','.1.1.','..1..','.1.1.','1...1'],
+ claw:['1.1.1','1.1.1','11111','.111.','..1..']};
+ const c=document.createElement('canvas');c.width=c.height=260;const x=c.getContext('2d');x.fillStyle='#0A0406';x.fillRect(0,0,260,260);
+ const spots=[[14,18],[120,10],[200,60],[60,90],[150,120],[20,170],[100,200],[210,180],[170,230],[230,120]];const ks=Object.keys(M);
+ spots.forEach(([sx,sy],n)=>{const m=M[ks[n%ks.length]];x.fillStyle=n%3===0?'#2B1219':'#1E0C11';m.forEach((r,y)=>[...r].forEach((v,xx)=>{if(v==='1')x.fillRect(sx+xx*4,sy+y*4,4,4)}))});
+ x.fillStyle='#24101a';x.font='700 10px monospace';x.fillText('НЕ ОН',96,70);x.fillText('ШУМ',30,244);
+ $('#foot').style.backgroundImage=`url(${c.toDataURL()})`})();
+
+initGate();initHero();
 </script>
 </body>
 </html>
