@@ -7,7 +7,7 @@ Two pixel creatures that live on a Linux desktop and **listen to your music**.
 
 They hear songs live (`cava` on PipeWire), map them after one play (sections, drops, mood), and react: hype arcs that detonate on the drop, a cute mask on cute-but-dark songs, a forgery mode for nightcore edits, hunts, rituals, and a terminal dock that watches your prompt.
 
-**▶ [Watch the film and play with the genres](https://zumdudd.github.io/demon/)** · 92 s, one song, eight genres, every frame from the real code.
+**▶ [PV, and play with the genres](https://zumdudd.github.io/demon/)** · 87 s, one song, eight genres, every frame from the real code. The track is a demo: the pets are made for live music.
 
 <p align="center">
   <img src="media/gifs/hero-demon.gif" alt="ДЕМОН dancing" height="160">

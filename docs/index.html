@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ПОДМЕНЫШ · the changeling that hears the drop · by ШУМ</title>
-<meta name="description" content="A pixel changeling living inside a Linux desktop pet. It took ДЕМОН's place, it hears whatever you play, and it blows up on the drop. By ШУМ (shum).">
+<title>ПОДМЕНЫШ · подменыш, который слышит дроп · by ШУМ</title>
+<meta name="description" content="Пиксельный подменыш в питомце для Linux. Занял место ДЕМОНА, слышит твою музыку и взрывается на дропе. By ШУМ (shum).">
 <meta property="og:title" content="ДЕМОН & ПОДМЕНЫШ · by ШУМ">
-<meta property="og:description" content="Two pixel pets that hear your music. ДЕМОН dances to it. ПОДМЕНЫШ, the changeling, takes his place and explodes on the drop.">
+<meta property="og:description" content="Два пиксельных питомца слышат твою музыку. ДЕМОН танцует. ПОДМЕНЫШ занимает его место и взрывается на дропе.">
 <meta property="og:image" content="https://zumdudd.github.io/demon/assets/img/card-v3.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Golos+Text:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-/* ДЕМОН & ПОДМЕНЫШ · page v2 «НЕ ОН» · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
+/* ДЕМОН & ПОДМЕНЫШ · page v3 «НЕ ОН» (v2 + shorter copy, ~80% Cyrillic, cable arms behind content, PV, download section) · concept + direction: ШУМ (shum) · built with Claude (Anthropic)
    The changeling took the page. Its palette, its grammar: never tweens (snaps, holds, skips), one wrong letter in every title.
    ДЕМОН's violet only comes back when it leaves (calm loops, starving, banished). */
 :root{
@@ -42,8 +42,8 @@ img.px,canvas.px{image-rendering:pixelated;image-rendering:crisp-edges}
 ::selection{background:var(--red);color:var(--void)}
 :focus-visible{outline:3px solid var(--red);outline-offset:3px}
 /* layers */
-#field,#fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none}
-#field{z-index:0}#fx{z-index:60}
+#field,#fx,#arms{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none}
+#field{z-index:0}#arms{z-index:1}#fx{z-index:60}
 main,nav,footer,.ticker{position:relative;z-index:2}
 main.shift{transform:translateX(5px);filter:drop-shadow(-5px 0 rgba(255,34,68,.75)) drop-shadow(4px 0 rgba(120,255,235,.18))}
 main.shift2{transform:translateX(-7px) skewX(-1deg)}
@@ -82,7 +82,7 @@ nav .links a{color:var(--mut);text-decoration:none}nav .links a:hover{color:var(
 .eye{width:34px;height:20px;border-radius:999px;background:#06060C;border:2px solid var(--red);position:relative;flex:none;overflow:hidden}
 .eye i{position:absolute;top:3px;left:13px;width:4px;height:10px;background:var(--red)}
 html.demon .eye{border-color:var(--v2)}html.demon .eye i{background:var(--g);width:8px;height:6px;top:5px}
-@media(max-width:860px){nav .links{display:none}nav .eye{margin-left:auto}}
+@media(max-width:1040px){nav .links{display:none}nav .eye{margin-left:auto}}
 /* hero */
 .hero{padding:56px 0 30px}
 .hero .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center}
@@ -90,9 +90,9 @@ html.demon .eye{border-color:var(--v2)}html.demon .eye i{background:var(--g);wid
 .kick{font:700 12px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:0 0 14px}
 .kick s{color:var(--v2);text-decoration-color:var(--red);text-decoration-thickness:3px}
 .hero h1{font:900 clamp(40px,5.3vw,84px)/.95 var(--disp);margin:0;letter-spacing:-.035em;white-space:nowrap}
-@media(max-width:900px){.hero h1{font-size:12.4vw}}
+@media(max-width:900px){.hero h1{font-size:10.6vw}}
 .hero .romp{margin:16px 0 0;display:flex;flex-wrap:wrap;gap:8px}
-.hero .lede{font-size:clamp(18px,2vw,22px);color:var(--mut);max-width:34ch;margin:22px 0 28px;line-height:1.5}
+.hero .lede{font-size:clamp(18px,2vw,22px);color:var(--mut);max-width:36ch;margin:22px 0 28px;line-height:1.5}
 .hero .lede b{color:var(--ink);font-weight:600}
 .btns{display:flex;flex-wrap:wrap;gap:12px}
 .stage{position:relative;background:var(--stage);border-radius:30px;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -215,171 +215,221 @@ footer .who{font:900 20px var(--disp);color:var(--ink)}
 .hud button:hover{background:var(--red);color:var(--void)}
 .hud.shake{animation:grab .2s steps(2) 4}
 @media(max-width:560px){.hud .hs{display:none}}
+/* page v3: PV button, demo note, download section */
+.pill.pv{text-transform:uppercase;letter-spacing:.06em}
+.demo{margin:18px 0 0;padding:12px 16px;border-left:3px solid var(--red);background:var(--card);color:var(--mut);font-size:15px;max-width:70ch}
+.demo i{display:block;font:400 12px var(--mono);font-style:normal;color:var(--dim);margin-top:4px;letter-spacing:.04em}
+.get{display:grid;grid-template-columns:1.25fr 1fr;gap:18px}@media(max-width:860px){.get{grid-template-columns:1fr}}
+.get>*{min-width:0}
+pre.code{margin:14px 0 0;padding:16px 18px;background:#06060C;border:2px solid var(--line2);border-radius:18px;font:400 13px/1.75 var(--mono);color:var(--ink);overflow-x:auto;white-space:pre;scrollbar-width:thin;scrollbar-color:var(--red) var(--line)}
+pre.code em{font-style:normal;color:var(--dim)}
+.files{margin:12px 0 0;padding:0;list-style:none}
+.files li{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;padding:10px 0;border-bottom:1px dashed var(--line2);color:var(--mut);font-size:15px}
+.files code{font:700 13px var(--mono);color:var(--ink);min-width:16ch;flex:none}
+.build{display:flex;gap:16px;align-items:center;margin-top:18px}
+.build .stage{width:208px;height:72px;border-radius:20px;flex:none;border:2px solid var(--line)}
+.build .stage img{width:100%;height:100%;object-fit:contain}
+.build p{margin:0;font-size:15px;color:var(--mut)}.build b{font:900 16px var(--disp);color:var(--ink)}
+@media(max-width:480px){.build{flex-direction:column;align-items:flex-start}}
 @media (prefers-reduced-motion:reduce){.ticker div,.st-rec::before{animation:none}}
 </style>
 </head>
 <body>
 <canvas id="field" aria-hidden="true"></canvas>
+<canvas id="arms" aria-hidden="true"></canvas>
 <canvas id="fx" aria-hidden="true"></canvas>
 
-<div class="gate" id="gate" role="dialog" aria-modal="true" aria-label="Enter the page">
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-label="Вход · enter">
  <div class="g-in">
-  <p class="g-k">ДОСМОТР · checkpoint</p>
+  <p class="g-k">ДОСМОТР</p>
   <canvas id="gateCv" class="px" width="214" height="240"></canvas>
   <p class="g-w">добро пожаловать · welcome to</p>
   <p class="g-t" aria-label="ПОДМЕНЫШ">ПОДМЕНЫ<b class="w" aria-hidden="true">Щ</b></p>
-  <p class="g-l" id="gateLog">&gt; scanning visitor_</p>
+  <p class="g-l" id="gateLog">&gt; сканирую гостя_</p>
   <button class="pill hot big" id="enter">войти <span aria-hidden="true">⋙</span> enter</button>
  </div>
 </div>
 
 <nav><div class="wrap"><a class="brand" href="#top" id="sig" aria-label="ДЕМОН & ПОДМЕНЫШ">ПОДМЕНЫ<span class="w">Щ</span></a>
-<div class="links"><a href="#film">Film</a><a href="#genres">Feed it</a><a href="#who">Not him</a><a href="#gallery">Gallery</a><a href="#how">How</a><a href="#words">Words</a><a href="https://github.com/zumdudd/demon">GitHub</a></div>
+<div class="links"><a href="#film">PV</a><a href="#genres">Корми</a><a href="#who">Не он</a><a href="#gallery">Галерея</a><a href="#how">Как</a><a href="#words">Слова</a><a href="#get">Скачать</a><a href="https://github.com/zumdudd/demon">GitHub</a></div>
 <span class="eye" id="eye" aria-hidden="true"><i></i></span></div></nav>
 
 <main id="top">
 <header class="hero"><div class="wrap grid">
  <div>
-  <p class="kick"><s>ДЕМОН</s> → НЕ ОН · not him</p>
+  <p class="kick"><s>ДЕМОН</s> → НЕ ОН</p>
   <h1 aria-label="ПОДМЕНЫШ">ПОДМЕНЫ<span class="w" aria-hidden="true">Щ</span></h1>
-  <div class="romp"><span class="chip">podmenysh</span><span class="chip">the changeling</span><span class="chip">by ШУМ</span></div>
-  <p class="lede">A pixel changeling living inside a Linux desktop pet. It took <b>ДЕМОН</b>'s place, it hears whatever you play, and it <b>blows up on the drop</b>.</p>
-  <div class="btns"><a class="pill hot" href="#film">▶ watch the film</a><a class="pill" href="#genres">♪ feed it a genre</a><a class="pill" href="https://github.com/zumdudd/demon">github</a></div>
+  <div class="romp"><span class="chip">podmenysh</span><span class="chip">changeling</span><span class="chip">by ШУМ</span></div>
+  <p class="lede">Пиксельный подменыш живёт в питомце на рабочем столе Linux. Он занял место <b>ДЕМОНА</b>, слышит твою музыку и <b>взрывается на дропе</b>.</p>
+  <div class="btns"><a class="pill hot pv" href="#film">▶ PV</a><a class="pill" href="#genres">♪ покорми</a><a class="pill" href="#get">скачать</a></div>
  </div>
  <div>
   <div class="stage hero-stage" id="heroStage">
-   <img class="px" id="heroImg" src="assets/gifs/hero-podmenysh.gif" alt="ПОДМЕНЫШ, a black pixel changeling with a red outline and long horns, snapping to the beat" width="214" height="240">
+   <img class="px" id="heroImg" src="assets/gifs/hero-podmenysh.gif" alt="ПОДМЕНЫШ: чёрный пиксельный подменыш с красным контуром и длинными рогами, щёлкает в бит" width="214" height="240">
    <canvas class="px" id="heroCv" width="214" height="240" hidden aria-hidden="true"></canvas>
    <span class="badge st-tag" id="heroTag">не он</span><span class="st-rec">REC</span>
-   <div class="st-line"><span id="heroFx">&gt; resident · ⇢ SLMAEVE</span><span><b id="heroState">СМОТРИТ</b> · it watches</span></div>
+   <div class="st-line"><span id="heroFx">&gt; резидент · ⇢ SLMAEVE</span><span><b id="heroState">СМОТРИТ</b></span></div>
   </div>
-  <div class="orig"><div class="stage"><img class="px" src="assets/gifs/hero-demon.gif" alt="ДЕМОН, the violet pixel creature it replaced" width="278" height="159"></div>
-   <p><span class="strike">ДЕМОН</span> <span class="rom">demon · the original</span><br>The violet one it replaced. He studies every song and dances. He only gets the calm ones back.</p></div>
+  <div class="orig"><div class="stage"><img class="px" src="assets/gifs/hero-demon.gif" alt="ДЕМОН: фиолетовый пиксельный зверь, которого он заменил" width="278" height="159"></div>
+   <p><span class="strike">ДЕМОН</span> <span class="rom">demon</span><br>Фиолетовый. Его заменили. Ему достаются только тихие песни.</p></div>
  </div>
 </div></header>
 
 <div class="ticker" aria-hidden="true"><div id="tick"></div></div>
 
 <section id="film"><div class="wrap">
- <div class="sh"><span class="num">[01]</span><h2 class="t" aria-label="the film">the fi<span class="w" aria-hidden="true">л</span>m</h2></div>
- <p class="sub">92 seconds, one song, eight genres. Every frame of the pets comes from their real code, driven by the music: nothing is animated by hand. Sound on.</p>
- <div class="film"><video controls playsinline preload="metadata" poster="assets/video/poster.jpg">
-  <source src="assets/video/showcase.webm" type="video/webm"><source src="assets/video/showcase.mp4" type="video/mp4"></video>
-  <div class="cap"><span>1920×1080 · 25 fps · captions in English</span><a href="assets/video/showcase.mp4" download>download mp4</a></div></div>
+ <div class="sh"><span class="num">[01]</span><h2 class="t" style="text-transform:uppercase" aria-label="PV">P<span class="w" aria-hidden="true">В</span> <span class="rom">promo video</span></h2></div>
+ <p class="sub">87 секунд, одна песня, восемь жанров. Кадры настоящие: рисует код питомцев, ведёт музыка. Со звуком.</p>
+ <div class="film"><video controls playsinline preload="metadata" poster="assets/video/poster-v2.jpg">
+  <source src="assets/video/showcase-v2.webm" type="video/webm"><source src="assets/video/showcase-v2.mp4" type="video/mp4"></video>
+  <div class="cap"><span>1920×1080 · 25 fps · титры: English</span><a href="assets/video/showcase-v2.mp4" download>скачать mp4</a></div></div>
+ <p class="demo">Трек здесь демо. Питомцы сделаны под живую музыку: включи свою.<i>the track is a demo · the pets are made for live music</i></p>
 </div></section>
 
 <section id="genres"><div class="wrap">
- <div class="sh"><span class="num">[02]</span><h2 class="t" aria-label="feed it a genre">feed it a gen<span class="w" aria-hidden="true">я</span>e</h2></div>
- <p class="sub">The song has eight parts and each one wakes up something different. Pick one and loop it: the page hears it too. Hard parts feed it. Calm parts make it leave, and ДЕМОН comes back.</p>
- <div class="tiles" id="tabs" role="tablist" aria-label="Song parts"></div>
+ <div class="sh"><span class="num">[02]</span><h2 class="t" aria-label="покорми">покорм<span class="w" aria-hidden="true">ы</span></h2></div>
+ <p class="sub">У песни восемь частей, и каждая будит своё. Выбери, зациклится, страница слышит тоже. Жёсткое кормит. Тихое гонит подменыша, и ДЕМОН возвращается.</p>
+ <div class="tiles" id="tabs" role="tablist" aria-label="Части песни"></div>
  <div class="genre" id="genre" role="tabpanel">
   <div><h3 id="g-t"></h3><div class="who" id="g-who"></div><p id="g-p"></p>
-   <div class="ctrl"><button class="pill hot" id="g-play">▶ loop it</button><div class="meter" id="g-m" aria-hidden="true"></div></div>
-   <p class="note">Loops play without a gap. Audio starts only when you press play.</p></div>
+   <div class="ctrl"><button class="pill hot" id="g-play">▶ петля</button><div class="meter" id="g-m" aria-hidden="true"></div></div>
+   <p class="note">Петли без шва. Звук только по кнопке.</p></div>
   <div class="scenes" id="g-sc"></div>
  </div>
 </div></section>
 
 <section id="who"><div class="wrap">
- <div class="sh"><span class="num">[03]</span><h2 class="t" aria-label="not him">not hi<span class="w" aria-hidden="true">м</span></h2></div>
- <p class="sub">They share one small window. They never share it at the same time. Since version 47 the changeling lives there, and he visits.</p>
+ <div class="sh"><span class="num">[03]</span><h2 class="t" aria-label="не он">не <span class="w" aria-hidden="true">э</span>н</h2></div>
+ <p class="sub">Одно окно на двоих. Вместе никогда. С версии 47 в нём живёт подменыш, а ДЕМОН приходит в гости.</p>
  <div class="two">
-  <div class="card p"><div class="bar"><span>▚▚ ПОДМЕНЫШ · FORM 18×14</span><b>НЕ ОН</b></div>
-   <h3>ПОДМЕНЫ<span class="w">Щ</span> <span class="rom">podmenysh · the changeling</span></h3>
-   <p class="mut">A changeling in the folk sense: a thing left in place of the real one. Black flesh, a one-cell red outline, longer horns, and one wrong letter in every title it shows.</p>
-   <ol><li data-n="01"><span><b>Never tweens.</b> It moves like harsh noise sounds: snaps, holds, skips and cuts. No smooth motion, ever. Not even on this page.</span></li>
-   <li data-n="02"><span><b>Ahead of the beat.</b> It moves 30 to 90 ms before each kick, as if it already knows.</span></li>
-   <li data-n="03"><span><b>The soul leaves.</b> On the gap before a drop its red goes out of the body. The body keeps moving. Then it blows up on the first kick.</span></li>
-   <li data-n="04"><span><b>Hunger.</b> Hard songs feed it, calm songs starve it. Starved, it leaves, and ДЕМОН comes back.</span></li>
-   <li data-n="05"><span><b>It eats the copy.</b> It fakes his dances, gets them wrong on purpose, and sometimes bites the fake ДЕМОН apart.</span></li></ol></div>
-  <div class="card d"><h3>ДЕМОН <span class="rom">demon · the original</span></h3>
-   <p class="mut">A 14×10 pixel creature in violet, with one green eye behind a visor. Anything about his face happens inside the visor.</p>
-   <ol><li data-n="01"><span><b>Three ears.</b> A live ear (kicks, snares, hats, voice, tempo), a song map learned after one full play, and a reading of what the song is about.</span></li>
-   <li data-n="02"><span><b>A witness.</b> The song is the main character. He dances, and reacts only to big moments.</span></li>
-   <li data-n="03"><span><b>He speaks twice.</b> «ВОТ ОНО.» (<i>this is it</i>) when a frame freezes, «…СЛЫШИШЬ?» (<i>do you hear it?</i>) at the very peak.</span></li></ol></div>
+  <div class="card p"><div class="bar"><span>▚▚ ПОДМЕНЫШ · ФОРМА 18×14</span><b>НЕ ОН</b></div>
+   <h3>ПОДМЕНЫ<span class="w">Щ</span> <span class="rom">podmenysh · changeling</span></h3>
+   <p class="mut">Подменыш из сказок: вещь, оставленная вместо настоящей. Чёрная плоть, красный контур, длинные рога, одна неправильная буква в заголовке.</p>
+   <ol><li data-n="01"><span><b>Без плавности.</b> Рывок, пауза, скачок, как harsh noise. Даже на этой странице.</span></li>
+   <li data-n="02"><span><b>Раньше бита.</b> На 30–90 мс раньше каждого кика.</span></li>
+   <li data-n="03"><span><b>Душа уходит.</b> Перед дропом красное покидает тело. На первом кике взрыв.</span></li>
+   <li data-n="04"><span><b>Голод.</b> Жёсткое кормит, тихое морит. Голодный уходит, ДЕМОН возвращается.</span></li>
+   <li data-n="05"><span><b>Жрёт копию.</b> Подделывает его танцы и нарочно ошибается.</span></li></ol></div>
+  <div class="card d"><h3>ДЕМОН <span class="rom">demon</span></h3>
+   <p class="mut">Фиолетовый пиксельный зверь 14×10, один зелёный глаз за визором.</p>
+   <ol><li data-n="01"><span><b>Три уха.</b> Живое, карта песни и понимание, о чём она.</span></li>
+   <li data-n="02"><span><b>Свидетель.</b> Песня главная. Он реагирует только на большое.</span></li>
+   <li data-n="03"><span><b>Говорит дважды.</b> «ВОТ ОНО.» и «…СЛЫШИШЬ?» на пике.</span></li></ol></div>
  </div>
 </div></section>
 
 <section id="gallery"><div class="wrap">
- <div class="sh"><span class="num">[04]</span><h2 class="t" aria-label="gallery">ga<span class="w" aria-hidden="true">л</span>lery</h2></div>
- <p class="sub">Twenty scenes, each rendered from the real engine on a scripted song. Swipe a row, click any scene to see it big.</p>
+ <div class="sh"><span class="num">[04]</span><h2 class="t" aria-label="галерея">гал<span class="w" aria-hidden="true">я</span>рея</h2></div>
+ <p class="sub">Двадцать сцен из настоящего движка. Листай ряд, жми на сцену.</p>
  <div id="gal"></div>
 </div></section>
 
 <section id="how"><div class="wrap">
- <div class="sh"><span class="num">[05]</span><h2 class="t" aria-label="how it's made">ho<span class="w" aria-hidden="true">ш</span> it's made</h2></div>
- <p class="sub">A desktop pet for Linux Mint (Python, GTK3, cairo), split into small parts that run in order. The pictures, the music and the film are all made from code.</p>
+ <div class="sh"><span class="num">[05]</span><h2 class="t" aria-label="как сделано">как сд<span class="w" aria-hidden="true">ё</span>лано</h2></div>
+ <p class="sub">Питомец для Linux Mint: Python, GTK3, cairo. Картинки, музыка и PV сделаны кодом.</p>
  <div class="how">
-  <div class="card"><span class="big">01</span><h3>Real frames</h3><p>The GIFs and the film run the pet's own drawing code on a fake clock, with a song fed to its ear instead of live audio. What you see is what the pet does on the desktop.</p></div>
-  <div class="card"><span class="big">02</span><h3>A song from scratch</h3><p>The music is synthesized in Python: no samples, no outside audio. One original melody travels through all eight genres. The forgery part is the cute part itself, sped up ×1.30.</p></div>
-  <div class="card"><span class="big">03</span><h3>In sync</h3><p>The song writes a map of every kick, snare and hat. The film reads that map, so the changeling blows up on the exact kick of each drop. This page reads the loops the same way.</p></div>
+  <div class="card"><span class="big">01</span><h3>Настоящие кадры</h3><p>GIF и PV рисует родной код питомца, песня идёт ему в ухо вместо живого звука.</p></div>
+  <div class="card"><span class="big">02</span><h3>Песня с нуля</h3><p>Синтез в Python, без сэмплов. Одна мелодия, восемь жанров. ПОДДЕЛКА это она же в ×1.30.</p></div>
+  <div class="card"><span class="big">03</span><h3>В такт</h3><p>Песня пишет карту кика, снейра и хэта. PV и страница читают её, поэтому взрыв ровно на кике.</p></div>
  </div>
 </div></section>
 
 <section id="words"><div class="wrap">
- <div class="sh"><span class="num">[06]</span><h2 class="t" aria-label="words">шords</h2></div>
- <p class="sub">Their world speaks Russian in capitals. Hover a word and it forges itself into Latin.</p>
+ <div class="sh"><span class="num">[06]</span><h2 class="t" aria-label="слова">слов<span class="w" aria-hidden="true">ъ</span></h2></div>
+ <p class="sub">Их мир говорит по-русски, капсом. Наведи на слово: оно перекуётся в латиницу.</p>
  <div class="gl" id="gloss"></div>
+</div></section>
+
+<section id="get"><div class="wrap">
+ <div class="sh"><span class="num">[07]</span><h2 class="t" aria-label="скачать">скач<span class="w" aria-hidden="true">ю</span>ть</h2></div>
+ <p class="sub">Всё лежит в открытом репо. Код MIT, арт и музыка CC BY 4.0.</p>
+ <div class="get">
+  <div class="card p"><div class="bar"><span>▚▚ ЗАПУСК · руками</span><b>LINUX</b></div>
+   <p class="mut">Нужно: Linux Mint (Cinnamon, X11), Python 3, GTK3, cairo, PipeWire, cava.</p>
+   <pre class="code" id="cmd" tabindex="0"><em># 1 · забрать</em>
+git clone https://github.com/zumdudd/demon.git &amp;&amp; cd demon
+<em># 2 · положить</em>
+mkdir -p ~/.local/lib ~/.local/bin
+cp -r lib/zarya ~/.local/lib/
+cp bin/zarya-* ~/.local/bin/ &amp;&amp; chmod +x ~/.local/bin/zarya-*
+<em># 3 · запустить</em>
+zarya-daemon-desk</pre>
+   <div class="btns" style="margin-top:16px"><button class="pill hot" id="copy">копировать</button><a class="pill" href="https://github.com/zumdudd/demon/archive/refs/heads/main.zip">zip</a><a class="pill" href="https://github.com/zumdudd/demon">github</a></div>
+   <p class="note">Сделано под один ПК: пути правь сам · built for one PC, adapt the paths.</p>
+   <div class="build"><div class="stage"><img class="px" src="assets/gifs/stroitsya-v1.gif" alt="ДЕМОН и ПОДМЕНЫШ дерутся за то, кто строит первым" width="416" height="144"></div>
+    <p>установщик в одну строку:<br><b>СТРОИТСЯ</b> <span class="rom">under construction</span></p></div>
+  </div>
+  <div class="card"><h3>где что <span class="rom">where</span></h3>
+   <ul class="files">
+    <li><code>docs/</code><span>эта страница</span></li>
+    <li><code>media/gifs/</code><span>21 GIF</span></li>
+    <li><code>media/video/v2/</code><span>PV, mp4 и webm</span></li>
+    <li><code>media/track/</code><span>трек и его карта</span></li>
+    <li><code>lib/zarya/</code><span>код питомцев, карта в INDEX.md</span></li>
+    <li><code>bin/</code><span>запуск</span></li>
+    <li><code>tools/</code><span>рендер GIF, трека и PV</span></li>
+    <li><code>CHANGELOG.md</code><span>история</span></li>
+   </ul></div>
+ </div>
 </div></section>
 </main>
 
 <footer id="foot"><div class="wrap">
- <p class="bye" aria-label="it stays.">it sta<span class="w" aria-hidden="true">я</span>s.</p>
- <p class="tag">НЕ ОН ⇢ <b>YOU</b> · it heard you scroll.</p>
+ <p class="bye" aria-label="он тут.">он т<span class="w" aria-hidden="true">ю</span>т.</p>
+ <p class="tag">НЕ ОН ⇢ <b>ТЫ</b> · он слышал, как ты скроллишь.</p>
  <div class="cols">
   <div><p class="who">ДЕМОН &amp; ПОДМЕНЫШ by ШУМ <span class="rom">shum · noise</span></p>
-  <p>Concept and direction: ШУМ. Built with Claude (Anthropic).<br>
-  Code: MIT · Art: CC BY 4.0 · Music: ШУМ × Claude, synthesized from scratch, CC BY 4.0.<br>
+  <p>Идея и направление: ШУМ. Сделано с Claude (Anthropic).<br>
+  Код: MIT · Арт: CC BY 4.0 · Музыка: ШУМ × Claude, синтез с нуля, CC BY 4.0.<br>
   <a href="https://github.com/zumdudd/demon">github.com/zumdudd/demon</a></p></div>
-  <button class="pill" id="banish">✕ изгнать · banish it</button>
+  <button class="pill" id="banish">✕ изгнать</button>
  </div>
 </div></footer>
 
 <div class="hud" id="hud" aria-hidden="true"><span class="hl">ГОЛОД</span><span class="hm" id="hm"></span><span class="hs" id="hs">СМОТРИТ</span><button id="hudBan" tabindex="-1" title="Изгнать · banish it">✕</button></div>
 
-<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Scene"><div class="lb-s"><img class="px" id="lb-i" alt=""></div><p id="lb-p"></p><button class="pill" id="lb-x">close</button></div>
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Сцена"><div class="lb-s"><img class="px" id="lb-i" alt=""></div><p id="lb-p"></p><button class="pill" id="lb-x">закрыть</button></div>
 
 <script>
-/* ДЕМОН & ПОДМЕНЫШ · page v2 · concept + direction: ШУМ (shum) · built with Claude (Anthropic) */
+/* ДЕМОН & ПОДМЕНЫШ · page v3 · concept + direction: ШУМ (shum) · built with Claude (Anthropic) */
 const SC = {
- 'hero-demon':['ДЕМОН','demon','He dances. The song is the hero, he is the one who feels it.'],
- 'hero-podmenysh':['ПОДМЕНЫШ','podmenysh','In his body, snapping on the beat. Never a smooth move.'],
- 'zarazhenie':['ЗАРАЖЕНИЕ','infection','The way in: he bursts on a kick, hangs for a beat, and comes back together as the changeling. Eyes last.'],
- 'smena':['СМЕНА · КУЛЬТ','the change','A way out. The ritual depends on the song: КУЛЬТ for industrial noise, ПРИЗЫВ for metal, ГНИЛЬ for calm.'],
- 'gnil':['ГНИЛЬ','rot','On calm songs it does not leave, it rots off him. Then he falls asleep.'],
- 'chuet':['ЧУЕТ','it smells it','It smells a hard song coming before the drop arrives.'],
- 'detonatsiya':['ДЕТОНАЦИЯ','detonation','Wind-up on the build, the soul leaves in the gap, it blows up on the first kick of the drop, then puts itself back together.'],
- 'delikates':['ДЕЛИКАТЕС','delicacy','Its favourite songs: harsh noise rap, heavy dubstep, hard techno. They summon it, and it blows up twice.'],
- 'krik':['КРИК','scream','A red word for every vocal hit in the chorus.'],
- 'primanka':['ПРИМАНКА','the lure','Cute songs with a dark core get a cute mask on its visor. Hard hits flicker it back to the slit.'],
- 'kukla':['КУКЛА','the doll','Dense, fast hits pull pink puppet strings.'],
- 'dva-litsa':['ДВА ЛИЦА','two faces','The hard switch between the cute face and the real one.'],
- 'poddelka':['ПОДДЕЛКА','forgery','A sped-up edit is a forgery, like itself. It runs at the edit\'s speed, with his dim ghost behind it.'],
- 'peremotka':['ПЕРЕМОТКА','rewind','The blast plays backwards and reassembles in skips.'],
- 'konfetti':['КОНФЕТТИ','confetti','Hearts and stars burst out, crack on the floor, and rot into red stains.'],
- 'pitch':['ПИТЧ','pitch','Its rows fly apart to alternating sides.'],
- 'past':['ПАСТЬ','the maw','It fakes ДЕМОН, then eats the copy in bites, a hair before each kick.'],
- 'proval':['ПРОВАЛ','failure','A calm dance on a hard song gives it away. The disguise breaks, and it eats the failed copy.'],
- 'kadr':['КАДР','freeze frame','At an epic peak the frame freezes. «ВОТ ОНО.», this is it.'],
- 'ogon':['ОГОНЬ','fire','An epic song at full excitement: flames climb him while he keeps dancing.']
+ 'hero-demon':['ДЕМОН','demon','Танцует. Песня герой, он чувствует её.'],
+ 'hero-podmenysh':['ПОДМЕНЫШ','podmenysh','В его теле. Щёлкает в бит, без плавности.'],
+ 'zarazhenie':['ЗАРАЖЕНИЕ','zarazhenie','Вход: взрыв на кике, пауза, и он собран подменышем.'],
+ 'smena':['СМЕНА · КУЛЬТ','smena','Выход. Ритуал по песне: КУЛЬТ, ПРИЗЫВ, ГНИЛЬ.'],
+ 'gnil':['ГНИЛЬ','gnil','Тихая песня: подменыш гниёт, ДЕМОН засыпает.'],
+ 'chuet':['ЧУЕТ','chuet','Чует жёсткую песню раньше дропа.'],
+ 'detonatsiya':['ДЕТОНАЦИЯ','detonatsiya','Разгон, душа уходит в паузе, взрыв на первом кике.'],
+ 'delikates':['ДЕЛИКАТЕС','delikates','Любимое: нойз-рэп, дабстеп, хард-техно. Взрыв дважды.'],
+ 'krik':['КРИК','krik','Красное слово на каждый вокальный удар.'],
+ 'primanka':['ПРИМАНКА','primanka','Милая маска на тёмной песне. Жёсткие удары её ломают.'],
+ 'kukla':['КУКЛА','kukla','Быстрые удары тянут розовые нити.'],
+ 'dva-litsa':['ДВА ЛИЦА','dva litsa','Резкий переход от милого лица к настоящему.'],
+ 'poddelka':['ПОДДЕЛКА','poddelka','Ускоренный эдит это подделка. За ним тусклый призрак ДЕМОНА.'],
+ 'peremotka':['ПЕРЕМОТКА','peremotka','Взрыв идёт назад, собирается скачками.'],
+ 'konfetti':['КОНФЕТТИ','konfetti','Сердца и звёзды разлетаются и гниют красными пятнами.'],
+ 'pitch':['ПИТЧ','pitch','Ряды разлетаются в стороны по очереди.'],
+ 'past':['ПАСТЬ','past\'','Притворяется ДЕМОНОМ и ест копию кусками, чуть раньше кика.'],
+ 'proval':['ПРОВАЛ','proval','Тихий танец на жёсткой песне выдаёт его. Он ест копию.'],
+ 'kadr':['КАДР','kadr','На эпичном пике кадр замирает. «ВОТ ОНО.»'],
+ 'ogon':['ОГОНЬ','ogon\'','Эпичный пик: на нём пламя, он танцует дальше.']
 };
-const GROUPS=[['the two of them',['hero-podmenysh','hero-demon']],['the change',['zarazhenie','smena','gnil']],['the hype arc',['chuet','detonatsiya','delikates','krik']],
- ['ПРИМАНКА · the lure',['primanka','kukla','dva-litsa']],['ПОДДЕЛКА · the forgery',['poddelka','peremotka','konfetti','pitch']],['the maw',['past','proval']],['ДЕМОН · the witness',['kadr','ogon']]];
+const GROUPS=[['двое',['hero-podmenysh','hero-demon']],['смена',['zarazhenie','smena','gnil']],['накал',['chuet','detonatsiya','delikates','krik']],
+ ['ПРИМАНКА',['primanka','kukla','dva-litsa']],['ПОДДЕЛКА',['poddelka','peremotka','konfetti','pitch']],['пасть',['past','proval']],['ДЕМОН · свидетель',['kadr','ogon']]];
 const PARTS=[
- {f:'01-calm',t:'ПРИВАЛ',r:'prival',g:'ambient · rain · 80 bpm',who:'ДЕМОН alone',b:['calm · ДЕМОН','dim'],img:'hero-demon',feed:-.004,calm:1,p:'Rain, slow pads, a few bells. The changeling leaves on calm songs: he listens, and the rain shows in his visor.',sc:['hero-demon']},
- {f:'02-build',t:'ЧУЕТ',r:'chuet',g:'build · 140 bpm',who:'ПОДМЕНЫШ arrives',b:['it arrives','red'],img:'zarazhenie',feed:.006,p:'A snare roll speeding up, a riser, then one beat of silence. It takes his place and smells the drop coming.',sc:['zarazhenie','chuet','smena']},
- {f:'03-deli',t:'ДЕЛИКАТЕС',r:'delikates',g:'industrial noise · 140 bpm',who:'ПОДМЕНЫШ feeds',b:['summons it','red'],img:'detonatsiya',feed:.014,hard:1,p:'Broken drums, crushed bass, shouts with no words. Its favourite food: it blows up on the drop, twice, and screams the chorus in red.',sc:['detonatsiya','delikates','krik']},
- {f:'04-lure',t:'ПРИМАНКА',r:'primanka',g:'cute, dark core · 160 bpm',who:'the mask',b:['mask','pink'],img:'primanka',feed:.004,p:'Bells, an 808 and a bright melody, with two bars where the mask slips. A cute face goes on its visor and cracks on the hard hits.',sc:['primanka','kukla','dva-litsa']},
- {f:'05-nightcore',t:'ПОДДЕЛКА',r:'poddelka',g:'sped up · 208 bpm',who:'the forgery',b:['×1.30','rust'],img:'poddelka',feed:.008,p:'The cute part itself, played ×1.30 faster, the way a nightcore edit is made. It knows a fake when it hears one.',sc:['poddelka','konfetti']},
- {f:'06-drop',t:'ПЕРЕМОТКА',r:'peremotka',g:'half-time drop · 140 bpm',who:'rewind, then the maw',b:['the drop','red'],img:'peremotka',feed:.012,hard:1,p:'The tape runs backwards into a wobble drop. The blast rewinds, the rows fly apart, and it eats the copy of him.',sc:['peremotka','pitch','past']},
- {f:'07-epic',t:'КАДР',r:'kadr',g:'orchestral · 90 bpm',who:'ДЕМОН comes back',b:['epic · ДЕМОН','violet'],img:'kadr',feed:-.003,calm:1,p:'Strings, choir, timpani, brass. The changeling leaves for the big moment: the frame freezes and ДЕМОН says «ВОТ ОНО.».',sc:['kadr','ogon']},
- {f:'08-outro',t:'ГНИЛЬ',r:'gnil',g:'tape decay · 80 bpm',who:'it rots off',b:['rot','dim'],img:'gnil',feed:-.005,calm:1,p:'The opening melody as a tape loop that wears down on every pass. On calm songs the changeling rots off him.',sc:['gnil','proval']}
+ {f:'01-calm',t:'ПРИВАЛ',r:'prival',g:'эмбиент · дождь · 80 bpm',who:'ДЕМОН один',b:['тихо · ДЕМОН','dim'],img:'hero-demon',feed:-.004,calm:1,p:'Дождь, медленные пэды. Подменыш уходит, ДЕМОН слушает.',sc:['hero-demon']},
+ {f:'02-build',t:'ЧУЕТ',r:'chuet',g:'билд · 140 bpm',who:'ПОДМЕНЫШ приходит',b:['пришёл','red'],img:'zarazhenie',feed:.006,p:'Ролл снейра, райзер, тишина. Он занимает место ДЕМОНА и чует дроп.',sc:['zarazhenie','chuet','smena']},
+ {f:'03-deli',t:'ДЕЛИКАТЕС',r:'delikates',g:'индастриал-нойз · 140 bpm',who:'ПОДМЕНЫШ ест',b:['зовёт его','red'],img:'detonatsiya',feed:.014,hard:1,p:'Сломанные барабаны, раздавленный бас. Любимая еда: взрыв на дропе дважды.',sc:['detonatsiya','delikates','krik']},
+ {f:'04-lure',t:'ПРИМАНКА',r:'primanka',g:'милое с тёмным ядром · 160 bpm',who:'маска',b:['маска','pink'],img:'primanka',feed:.004,p:'Колокольчики, 808, яркая мелодия. На визоре милая маска, на жёстких ударах она трескается.',sc:['primanka','kukla','dva-litsa']},
+ {f:'05-nightcore',t:'ПОДДЕЛКА',r:'poddelka',g:'ускорено · 208 bpm',who:'подделка',b:['×1.30','rust'],img:'poddelka',feed:.008,p:'Та же милая часть в ×1.30, как nightcore. Подделку он узнаёт сразу.',sc:['poddelka','konfetti']},
+ {f:'06-drop',t:'ПЕРЕМОТКА',r:'peremotka',g:'half-time дроп · 140 bpm',who:'перемотка, потом пасть',b:['дроп','red'],img:'peremotka',feed:.012,hard:1,p:'Плёнка назад в wobble-дроп. Взрыв перематывается, он ест копию ДЕМОНА.',sc:['peremotka','pitch','past']},
+ {f:'07-epic',t:'КАДР',r:'kadr',g:'оркестр · 90 bpm',who:'ДЕМОН возвращается',b:['эпик · ДЕМОН','violet'],img:'kadr',feed:-.003,calm:1,p:'Струнные, хор, литавры. Кадр замирает, ДЕМОН говорит «ВОТ ОНО.».',sc:['kadr','ogon']},
+ {f:'08-outro',t:'ГНИЛЬ',r:'gnil',g:'распад плёнки · 80 bpm',who:'отваливается',b:['гниль','dim'],img:'gnil',feed:-.005,calm:1,p:'Начальная мелодия петлёй плёнки, что стирается с каждым кругом. Подменыш отваливается.',sc:['gnil','proval']}
 ];
-const GLOSS=[['ДЕМОН','demon','the violet one who listens'],['ПОДМЕНЫШ','podmenysh','the changeling'],['ШУМ','shum','noise; the maker'],['НЕ ОН','ne on','not him'],['ЗАРАЖЕНИЕ','zarazhenie','infection, the way in'],
- ['СМЕНА','smena','the change'],['ГНИЛЬ','gnil','rot'],['ЧУЕТ','chuet','it smells it'],['ДУША ВОН','dusha von','the soul leaves'],['ДЕТОНАЦИЯ','detonatsiya','detonation'],['СБОРКА','sborka','reassembly'],['ДЕЛИКАТЕС','delikates','delicacy'],
- ['КРИК','krik','scream'],['ПРИМАНКА','primanka','lure, bait'],['КУКЛА','kukla','doll'],['ДВА ЛИЦА','dva litsa','two faces'],['ПОДДЕЛКА','poddelka','forgery'],
- ['ПЕРЕМОТКА','peremotka','rewind'],['ПИТЧ','pitch','pitch'],['КОНФЕТТИ','konfetti','confetti'],['ПАСТЬ','past\'','maw'],['ПРОВАЛ','proval','failure'],
- ['ГОЛОД','golod','hunger'],['ИЗГНАТЬ','izgnat\'','banish'],['СКАН','skan','scan'],['КАДР','kadr','frame'],['ОГОНЬ','ogon\'','fire'],['ВОТ ОНО.','vot ono','this is it']];
+const GLOSS=[['ДЕМОН','demon','violet, listens'],['ПОДМЕНЫШ','podmenysh','changeling'],['ШУМ','shum','noise, the maker'],['НЕ ОН','ne on','not him'],['ЗАРАЖЕНИЕ','zarazhenie','infection'],
+ ['СМЕНА','smena','the change'],['ГНИЛЬ','gnil','rot'],['ЧУЕТ','chuet','it smells it'],['ДУША ВОН','dusha von','soul out'],['ДЕТОНАЦИЯ','detonatsiya','detonation'],['ДЕЛИКАТЕС','delikates','delicacy'],
+ ['КРИК','krik','scream'],['ПРИМАНКА','primanka','lure'],['ПОДДЕЛКА','poddelka','forgery'],['ПАСТЬ','past\'','maw'],['ПРОВАЛ','proval','failure'],
+ ['ГОЛОД','golod','hunger'],['ИЗГНАТЬ','izgnat\'','banish'],['КАДР','kadr','frame'],['ВОТ ОНО.','vot ono','this is it']];
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], gif=n=>`assets/gifs/${n}.gif`;
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -475,9 +525,9 @@ class Sprite{
 }
 
 /* ---------- the field: pixels going around the whole page, in snaps ---------- */
-const field=$('#field'),fctx=field.getContext('2d'),fxc=$('#fx'),xctx=fxc.getContext('2d');
+const field=$('#field'),fctx=field.getContext('2d'),fxc=$('#fx'),xctx=fxc.getContext('2d'),arc=$('#arms'),actx=arc.getContext('2d');
 let VW=0,VH=0,CELL=4;
-function resize(){VW=innerWidth;VH=innerHeight;CELL=VW<600?3:4;[field,fxc].forEach(c=>{c.width=VW;c.height=VH})}
+function resize(){VW=innerWidth;VH=innerHeight;CELL=VW<600?3:4;[field,fxc,arc].forEach(c=>{c.width=VW;c.height=VH})}
 resize();addEventListener('resize',()=>{resize();seed()});
 const COL={dust:['#4C0D1C','#4C0D1C','#5E1020','#881B22','#881B22','#C81E3F','#FF2244','#F2DCE0'],demon:['#2C2560','#3B3373','#4A3C8F','#7B4DFF','#9D7BFF','#8FD9A8']};
 let P=[],worms=[],rain=[],stuck=[],T=0,hop=0,mouse={x:-999,y:-999,vx:0,vy:0,t:0};
@@ -511,29 +561,31 @@ function fieldTick(){const gw=Math.ceil(VW/CELL),gh=Math.ceil(VH/CELL),dm=docume
   rain=rain.filter(r=>{if(!h)r.y+=r.v;fctx.fillStyle='#4C0D1C';fctx.fillRect(r.x*CELL,(r.y-3)*CELL,CELL,CELL*3);fctx.fillStyle='#FF2244';fctx.fillRect(r.x*CELL,r.y*CELL,CELL,CELL);return r.y<gh+4})
   stuck.forEach(s=>{fctx.fillStyle=s.c;fctx.fillRect(s.x,s.y,CELL,CELL)})}}
 
-/* ---------- fx: arms, slabs, bursts (above the content, never clickable) ---------- */
+/* ---------- fx: cables (behind the content, never over the gallery), slabs and bursts (above, never clickable) ---------- */
 let arms=[],slabs=[],bursts=[];const A=8;
 function spawnArm(target){const side=ri(0,3),gw=Math.ceil(VW/A),gh=Math.ceil(VH/A);
- let tx,ty;if(target){tx=target[0]/A|0;ty=target[1]/A|0}else{const els=$$('.tile,.stage,.card,h2.t,.pill,.film').filter(e=>{const r=e.getBoundingClientRect();return r.bottom>40&&r.top<VH-40&&r.width>0});
+ let tx,ty;if(target){tx=target[0]/A|0;ty=target[1]/A|0}else{const els=$$('.tile,.stage,.card,h2.t,.pill,.film').filter(e=>{const r=e.getBoundingClientRect();return r.bottom>40&&r.top<VH-40&&r.width>0&&!e.closest('#gallery')});
   if(els.length&&chance(.75)){const e=pick(els),r=e.getBoundingClientRect();tx=(side===0?r.left:side===1?r.right:rnd(r.left,r.right))/A|0;ty=(side===2?r.top:side===3?r.bottom:rnd(r.top,r.bottom))/A|0;arms.grab=e}else{tx=mouse.x>0?mouse.x/A|0:ri(8,gw-8);ty=mouse.y>0?mouse.y/A|0:ri(8,gh-8)}}
+ {const gr=$('#gallery').getBoundingClientRect();if(ty*A>=gr.top-A&&ty*A<=gr.bottom+A){arms.grab=null;return}}// never over the gallery
  const start=side===0?[-1,ri(2,gh-2)]:side===1?[gw,ri(2,gh-2)]:side===2?[ri(2,gw-2),-1]:[ri(2,gw-2),gh];
  const path=[start];let [x,y]=start,guard=0;while((x!==tx||y!==ty)&&guard++<400){const dx=tx-x,dy=ty-y;
   if(chance(.12)){if(Math.abs(dx)>Math.abs(dy))y+=chance(.5)?1:-1;else x+=chance(.5)?1:-1}else if(Math.random()<Math.abs(dx)/(Math.abs(dx)+Math.abs(dy)))x+=Math.sign(dx);else y+=Math.sign(dy);path.push([x,y])}
  const el=arms.grab||null;arms.grab=null;arms.push({path,n:1,hold:ri(8,18),phase:'grow',el,out:chance(.5)?'cut':'back'})}
 function drawCell(ctx,x,y,s,edge,fill){ctx.fillStyle=edge;ctx.fillRect(x,y,s,s);ctx.fillStyle=fill;ctx.fillRect(x+2,y+2,s-4,s-4)}
-function fxTick(){xctx.clearRect(0,0,VW,VH);const dm=document.documentElement.classList.contains('demon');const edge=dm?'#9D7BFF':'#FF2244';
+function fxTick(){xctx.clearRect(0,0,VW,VH);actx.clearRect(0,0,VW,VH);const dm=document.documentElement.classList.contains('demon');const edge=dm?'#9D7BFF':'#FF2244';
  arms=arms.filter(a=>{if(a.phase==='grow'){a.n=Math.min(a.path.length,a.n+Math.max(ri(3,5),Math.ceil(a.path.length/ri(9,13))));if(a.n===a.path.length){a.phase='hold';if(a.el)a.el.classList.add('grab')}}
   else if(a.phase==='hold'){if(--a.hold<=0){a.phase=a.out;if(a.el)a.el.classList.remove('grab')}}
   else if(a.phase==='back'){a.n-=ri(4,7);if(a.n<=0)return false}else if(a.phase==='cut')return false;
-  const jit=a.phase==='hold'?a.path.map(()=>chance(.12)?ri(-2,2):0):null,B=A*2;
-  // outline pass, then the black flesh: one limb, red edge all round (the changeling's own grammar)
-  xctx.fillStyle=edge;for(let i=0;i<a.n;i++){const [x,y]=a.path[i];xctx.fillRect(x*A-2+(jit?jit[i]:0),y*A-2,B+4,B+4)}
-  xctx.fillStyle='#06060C';for(let i=0;i<a.n;i++){const [x,y]=a.path[i];xctx.fillRect(x*A+(jit?jit[i]:0),y*A,B,B)}
-  xctx.fillStyle='#4C0D1C';for(let i=5;i<a.n;i+=7){const [x,y]=a.path[i];xctx.fillRect(x*A+4,y*A+4,B-8,3)}
-  if(a.phase==='hold'||(a.phase==='grow'&&a.n>=a.path.length-1)){const [x,y]=a.path[a.n-1],[px,py]=a.path[Math.max(0,a.n-3)],dx=Math.sign(x-px),dy=Math.sign(y-py);
-   for(const sp of [-1,0,1]){const L=sp?3:4;for(let k=1;k<=L;k++){const cx=x+dx*(k+1)+(dy||!dx?0:0)+(dy?sp*(k):0)+(dx?0:0),cy=y+dy*(k+1)+(dx?sp*(k):0);
-     xctx.fillStyle=edge;xctx.fillRect(cx*A+A/2-2,cy*A+A/2-2,A+4,A+4);xctx.fillStyle=k===L?edge:'#06060C';xctx.fillRect(cx*A+A/2,cy*A+A/2,A,A)}}}
+  const jit=a.phase==='hold'?a.path.map(()=>chance(.12)?ri(-2,2):0):null,B=A*2,TP=9;
+  const sz=i=>{const t=a.n-1-i;return t>=TP?B:Math.max(6,Math.round(6+t*(B-6)/TP))};
+  // a glitch cable, not a limb: red edge all round, black core, it thins toward the tip (drawn behind the content)
+  actx.fillStyle=edge;for(let i=0;i<a.n;i++){const [x,y]=a.path[i],s=sz(i),o=(B-s)/2;actx.fillRect(x*A+o-2+(jit?jit[i]:0),y*A+o-2,s+4,s+4)}
+  actx.fillStyle='#06060C';for(let i=0;i<a.n;i++){const [x,y]=a.path[i],s=sz(i),o=(B-s)/2;actx.fillRect(x*A+o+(jit?jit[i]:0),y*A+o,s,s)}
+  actx.fillStyle='#4C0D1C';for(let i=5;i<a.n-TP;i+=7){const [x,y]=a.path[i];actx.fillRect(x*A+4,y*A+4,B-8,3)}
+  // the tip: one lit plug and two loose pixels. No hand, no fingers.
+  if(a.phase==='hold'||(a.phase==='grow'&&a.n>=a.path.length-1)){const [x,y]=a.path[a.n-1];actx.fillStyle=edge;actx.fillRect(x*A+5,y*A+5,6,6);if(chance(.5))for(let k=0;k<2;k++)actx.fillRect(x*A+ri(-14,22),y*A+ri(-14,22),4,4)}
   return true});
+ {const gr=$('#gallery').getBoundingClientRect();if(gr.bottom>0&&gr.top<VH)actx.clearRect(gr.left,gr.top,gr.width,gr.height)}// the gallery is never covered
  slabs=slabs.filter(s=>{xctx.fillStyle='#06060C';xctx.fillRect(s.x,s.y,s.w,s.h);xctx.fillStyle=edge;xctx.fillRect(s.x,s.y,s.w,2);if(s.h>14)xctx.fillRect(s.x,s.y+s.h-2,s.w,2);xctx.fillRect(s.x,s.y,2,s.h);
   if(s.txt){xctx.font='700 12px "JetBrains Mono",monospace';xctx.fillStyle=edge;xctx.fillText(s.txt,s.x+10,s.y+s.h/2+4)}return --s.life>0});
  bursts=bursts.filter(b=>{b.k++;for(const q of b.p){if(b.k<9){q.x+=q.vx;q.y+=q.vy}else if(b.k>12){const rx=q.ox-q.x,ry=q.oy-q.y;q.x+=Math.round(rx*.35);q.y+=Math.round(ry*.35)}
@@ -551,32 +603,32 @@ function forge(el,from,to,cb){let i=0;el.textContent=from;const iv=setInterval((
 /* ---------- hero: the soul leaves, the scan shows code instead of it ---------- */
 let hero=null,heroDemon=null,heroCur=null,heroMode='podmenysh';
 const heroCv=$('#heroCv'),heroImg=$('#heroImg'),heroFx=$('#heroFx'),heroState=$('#heroState'),heroTag=$('#heroTag');
-function setState(ru,en){heroState.textContent=ru;heroState.nextSibling.textContent=' · '+en;$('#hs').textContent=ru+' · '+en}
-function soulOut(){if(!heroCur||heroCur.fx.m!=='none'||heroMode!=='podmenysh')return;const s=heroCur;heroFx.textContent='> ДУША ВОН · the soul leaves';
+function setState(ru){heroState.textContent=ru;$('#hs').textContent=ru}
+function soulOut(){if(!heroCur||heroCur.fx.m!=='none'||heroMode!=='podmenysh')return;const s=heroCur;heroFx.textContent='> ДУША ВОН';
  const path=[[0,0],[1,-1],[0,-2],[2,-4],[-1,-6],[3,-9],[1,-12],[4,-14],[2,-16]].map(([x,y])=>[x*3,y*3]);
  s.fx={m:'soul',k:0,off:[0,0],lag:ri(200,700),back:ri(14,22),trail:[]};
  const iv=setInterval(()=>{const f=s.fx;f.k++;if(f.k<4)f.off=[ri(-1,1)*2,0];
   else if(f.k<f.back){const o=path[Math.min(path.length-1,f.k-4)];f.trail=[f.off,...f.trail].slice(0,3);f.off=[o[0]+(chance(.3)?ri(-3,3):0),o[1]];f.flick=chance(.15)}
   else if(f.k<f.back+3){f.trail=[];f.off=[Math.round(f.off[0]*.4),Math.round(f.off[1]*.4)];f.flick=false}
   else if(f.k===f.back+3){f.flash=1;f.off=[0,0];bus.kick(1)}
-  else{clearInterval(iv);s.fx={m:'none'};heroFx.textContent='> СБОРКА · back together'}},TICK)}
-function scan(){if(!heroCur||heroCur.fx.m!=='none'||heroMode!=='podmenysh')return;const s=heroCur;heroFx.textContent='> СКАН · scanning: no body found';s.fx={m:'scan',y:0};s.glyph=[];
- let hold=0;const iv=setInterval(()=>{const f=s.fx;if(f.y<s.h+6){f.y+=ri(6,14)}else if(++hold>ri(10,16)){clearInterval(iv);s.fx={m:'split',k:0,dx:4};let k=0;const j=setInterval(()=>{s.fx.k=++k;if(k>3){clearInterval(j);s.fx={m:'none'};heroFx.textContent='> НЕ ОН · it was there'}},TICK)}},TICK)}
+  else{clearInterval(iv);s.fx={m:'none'};heroFx.textContent='> СБОРКА'}},TICK)}
+function scan(){if(!heroCur||heroCur.fx.m!=='none'||heroMode!=='podmenysh')return;const s=heroCur;heroFx.textContent='> СКАН · тела нет';s.fx={m:'scan',y:0};s.glyph=[];
+ let hold=0;const iv=setInterval(()=>{const f=s.fx;if(f.y<s.h+6){f.y+=ri(6,14)}else if(++hold>ri(10,16)){clearInterval(iv);s.fx={m:'split',k:0,dx:4};let k=0;const j=setInterval(()=>{s.fx.k=++k;if(k>3){clearInterval(j);s.fx={m:'none'};heroFx.textContent='> НЕ ОН · он был тут'}},TICK)}},TICK)}
 async function initHero(){if(RM)return;try{hero=new Sprite(heroCv,await loadGIF('hero-podmenysh'));}catch(e){return}
  heroCv.width=642;heroCv.height=720;heroCur=hero;heroCv.hidden=false;heroImg.style.visibility='hidden';
  (function loop(now){heroCur.draw(now);requestAnimationFrame(loop)})(performance.now());
  let n=0;setInterval(()=>{if(document.hidden)return;(n++%2?scan:soulOut)()},7600);setTimeout(soulOut,2400);
  loadGIF('hero-demon').then(g=>{heroDemon=new Sprite(heroCv,g)}).catch(()=>{})}
-const NAME={h1:$('h1').innerHTML,kick:$('.kick').innerHTML};function names(d){$('h1').innerHTML=d?'ДЕМОН':NAME.h1;$('h1').setAttribute('aria-label',d?'ДЕМОН':'ПОДМЕНЫШ');$('.kick').innerHTML=d?'<s>ПОДМЕНЫШ</s> → ОН · him, for now':NAME.kick}
-function toDemon(why){if(heroMode==='demon')return;heroMode='demon';setTimeout(()=>heroMode==='demon'&&names(1),TICK*10);document.documentElement.classList.add('demon');setState('ЖДЁТ','it waits');heroTag.textContent='он';
- heroFx.textContent='> '+(why||'ГНИЛЬ · it rots off');
- if(heroCur&&heroDemon){const s=heroCur;s.fx={m:'rot',k:0,rot:0};let k=0;const iv=setInterval(()=>{s.fx.k=++k;s.fx.rot=k/10;if(k>=10){clearInterval(iv);s.fx={m:'none'};heroDemon.bgTo=VIOLET;heroDemon.cv=heroCv;heroCur=heroDemon;heroFx.textContent='> ДЕМОН · he is back for now'}},TICK)}
+const NAME={h1:$('h1').innerHTML,kick:$('.kick').innerHTML};function names(d){$('h1').innerHTML=d?'ДЕМОН':NAME.h1;$('h1').setAttribute('aria-label',d?'ДЕМОН':'ПОДМЕНЫШ');$('.kick').innerHTML=d?'<s>ПОДМЕНЫШ</s> → ОН':NAME.kick}
+function toDemon(why){if(heroMode==='demon')return;heroMode='demon';setTimeout(()=>heroMode==='demon'&&names(1),TICK*10);document.documentElement.classList.add('demon');setState('ЖДЁТ');heroTag.textContent='он';
+ heroFx.textContent='> '+(why||'ГНИЛЬ');
+ if(heroCur&&heroDemon){const s=heroCur;s.fx={m:'rot',k:0,rot:0};let k=0;const iv=setInterval(()=>{s.fx.k=++k;s.fx.rot=k/10;if(k>=10){clearInterval(iv);s.fx={m:'none'};heroDemon.bgTo=VIOLET;heroDemon.cv=heroCv;heroCur=heroDemon;heroFx.textContent='> ДЕМОН · вернулся'}},TICK)}
  else heroImg.src=gif('hero-demon')}
 function toPod(){if(heroMode!=='demon')return;heroMode='podmenysh';const r=$('#heroStage').getBoundingClientRect();
  burst(r.left+r.width/2,r.top+r.height/2,170);slabStorm(3);shiftPage();
  let k=0;const iv=setInterval(()=>{k++;// ДВА ЛИЦА: hard flicker between them, then the infection holds
   if(k%2)document.documentElement.classList.toggle('demon');if(hero&&heroDemon)heroCur=k%2?hero:heroDemon;
-  if(k>=5){clearInterval(iv);document.documentElement.classList.remove('demon');if(hero)heroCur=hero;else heroImg.src=gif('hero-podmenysh');heroTag.textContent='не он';names(0);heroFx.textContent='> ЗАРАЖЕНИЕ · it is back';setState('СМОТРИТ','it watches')}},TICK)}
+  if(k>=5){clearInterval(iv);document.documentElement.classList.remove('demon');if(hero)heroCur=hero;else heroImg.src=gif('hero-podmenysh');heroTag.textContent='не он';names(0);heroFx.textContent='> ЗАРАЖЕНИЕ';setState('СМОТРИТ')}},TICK)}
 
 /* ---------- hunger (ГОЛОД) and banishing ---------- */
 let hunger=.55,resist=0,demonTimer=null,lastBoom=0;
@@ -584,14 +636,14 @@ const hm=$('#hm');for(let i=0;i<12;i++)hm.appendChild(document.createElement('i'
 function drawHunger(){[...hm.children].forEach((c,i)=>c.classList.toggle('on',i<Math.round(hunger*12)))}
 drawHunger();
 function feed(v){hunger=Math.max(0,Math.min(1,hunger+v));drawHunger();
- if(hunger>=1&&performance.now()-lastBoom>30000){lastBoom=performance.now();hunger=.62;const r=$('#heroStage').getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,220);slabStorm(4);shiftPage();setState('РЕКОРД','record');setTimeout(()=>heroMode==='podmenysh'&&setState(bus.audio?'ЖРЁТ':'СМОТРИТ',bus.audio?'it feeds':'it watches'),2400)}
- if(hunger<=0&&heroMode==='podmenysh'){toDemon('ГОЛОД · it starved and left');clearTimeout(demonTimer);demonTimer=setTimeout(()=>{hunger=.4;drawHunger();toPod()},20000)}}
+ if(hunger>=1&&performance.now()-lastBoom>30000){lastBoom=performance.now();hunger=.62;const r=$('#heroStage').getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,220);slabStorm(4);shiftPage();setState('РЕКОРД');setTimeout(()=>heroMode==='podmenysh'&&setState(bus.audio?'ЖРЁТ':'СМОТРИТ'),2400)}
+ if(hunger<=0&&heroMode==='podmenysh'){toDemon('ГОЛОД · ушёл голодным');clearTimeout(demonTimer);demonTimer=setTimeout(()=>{hunger=.4;drawHunger();toPod()},20000)}}
 setInterval(()=>{if(!bus.audio&&heroMode==='podmenysh')feed(-1/12/15)},2000);
 function banish(){const hud=$('#hud');if(heroMode==='demon')return;
- if(resist<1){resist++;hud.classList.remove('shake');void hud.offsetWidth;hud.classList.add('shake');setState('НЕ УЙДУ','it holds on');
+ if(resist<1){resist++;hud.classList.remove('shake');void hud.offsetWidth;hud.classList.add('shake');setState('НЕ УЙДУ');
   const r=hud.getBoundingClientRect();spawnArm([r.left+20,r.top+10]);spawnArm([r.right-20,r.top+10]);slabStorm(2);corrupt($('#banish'));
-  setTimeout(()=>heroMode==='podmenysh'&&setState('СМОТРИТ','it watches'),2600);return}
- resist=0;toDemon('ИЗГНАТЬ · banished');clearTimeout(demonTimer);demonTimer=setTimeout(toPod,15000)}
+  setTimeout(()=>heroMode==='podmenysh'&&setState('СМОТРИТ'),2600);return}
+ resist=0;toDemon('ИЗГНАТЬ');clearTimeout(demonTimer);demonTimer=setTimeout(toPod,15000)}
 $('#banish').onclick=banish;$('#hudBan').onclick=banish;
 
 /* ---------- the clock: everything snaps on 12 fps ticks ---------- */
@@ -615,20 +667,20 @@ $('#tick').innerHTML=(words.map(w=>w).join('<em>✕</em>')+'<em>✕</em>').repea
 
 /* ---------- gateway (ДОСМОТР) ---------- */
 const gate=$('#gate');
-let entering=false;function enter(){if(!gate.classList.contains('on')||entering)return;entering=true;store.set('shum-in','1');$('#gateLog').innerHTML='&gt; <b>ПРОХОДИ</b> · go through';
+let entering=false;function enter(){if(!gate.classList.contains('on')||entering)return;entering=true;store.set('shum-in','1');$('#gateLog').innerHTML='&gt; <b>ПРОХОДИ</b>';
  const r=$('#enter').getBoundingClientRect();if(!RM)burst(r.left+r.width/2,r.top+r.height/2,200);
  let k=0;const iv=setInterval(()=>{k++;gate.classList.toggle('cut1',k===1);gate.classList.toggle('cut2',k===2);if(k>=3){clearInterval(iv);gate.classList.remove('on','cut1','cut2');document.body.classList.remove('gated');signature()}},TICK*1.5)}
 async function initGate(){const skip=store.get('shum-in')||location.hash;if(skip){signature();return}
  gate.classList.add('on');document.body.classList.add('gated');$('#enter').focus();
  $('#enter').onclick=enter;addEventListener('keydown',e=>{if(gate.classList.contains('on')&&(e.key==='Escape'||e.key==='Enter'))enter()});
- const log=$('#gateLog'),lines=['&gt; scanning visitor_','&gt; scanning visitor ▮▮▯▯','&gt; body: <b>НЕ ОН</b> · not him','&gt; ДОСМОТР · you may pass'];let li=0;const lv=setInterval(()=>{if(!gate.classList.contains('on')){clearInterval(lv);return}log.innerHTML=lines[li=Math.min(lines.length-1,li+1)]},900);
+ const log=$('#gateLog'),lines=['&gt; сканирую гостя_','&gt; сканирую гостя ▮▮▯▯','&gt; тело: <b>НЕ ОН</b>','&gt; ДОСМОТР · проходи'];let li=0;const lv=setInterval(()=>{if(!gate.classList.contains('on')){clearInterval(lv);return}log.innerHTML=lines[li=Math.min(lines.length-1,li+1)]},900);
  const cv=$('#gateCv');try{const g=await loadGIF('hero-podmenysh');const s=new Sprite(cv,g);s.bgTo=[0x0A,0x04,0x06];cv.width=g.w*2;cv.height=g.h*2;s.fx={m:'reveal',y:RM?g.h+10:0};s.glyph=[];
   let hold=0;(function loop(now){if(!gate.classList.contains('on'))return;s.draw(now);requestAnimationFrame(loop)})(performance.now());
   const iv=setInterval(()=>{if(!gate.classList.contains('on')){clearInterval(iv);return}if(s.fx.y<g.h+8)s.fx.y+=ri(4,10);else if(++hold>30){hold=0;s.fx.y=0}},TICK)}catch(e){cv.hidden=true}}
 
 /* ---------- gallery (carousels) + lightbox ---------- */
 const gal=$('#gal');
-GROUPS.forEach(([g,ns])=>{const w=document.createElement('div');w.className='gg';w.innerHTML=`<div class="gg-h"><h3>${g}</h3><span>${String(ns.length).padStart(2,'0')} scenes</span></div><div class="row"></div>`;
+GROUPS.forEach(([g,ns])=>{const w=document.createElement('div');w.className='gg';w.innerHTML=`<div class="gg-h"><h3>${g}</h3><span>${String(ns.length).padStart(2,'0')} gif</span></div><div class="row"></div>`;
  ns.forEach(n=>{const b=document.createElement('button');const [ru,ro,tx]=SC[n];b.setAttribute('aria-label',`${ru}: ${tx}`);
   b.innerHTML=`<div class="st"><img class="px" loading="lazy" src="${gif(n)}" alt=""></div><div class="c1"><span>${ru}</span><i>${ro}</i></div><div class="c2">${tx}</div>`;
   b.onclick=()=>openLb(n);w.querySelector('.row').appendChild(b)});gal.appendChild(w)});
@@ -653,14 +705,14 @@ function findKicks(b){const x=b.getChannelData(0),sr=b.sampleRate,a=1-Math.exp(-
 async function buf(i){const key=PARTS[i].f;if(cache[key])return cache[key];ac=ac||new (window.AudioContext||window.webkitAudioContext)();
  const get=async ext=>{const r=await fetch(`assets/loops/${key}.${ext}`);return ac.decodeAudioData(await r.arrayBuffer())};
  try{cache[key]=await get(useOpus?'opus':'mp3')}catch(e){cache[key]=await get('mp3')}onsets[key]=findKicks(cache[key]);return cache[key]}
-function stop(){if(src){try{src.stop()}catch(e){}src=null}playing=false;bus.audio=false;$('#g-play').textContent='▶ loop it';[...gm.children].forEach(c=>c.classList.remove('on'));
- if(heroMode==='demon'&&!demonTimer)toPod();if(heroMode==='podmenysh')setState('СМОТРИТ','it watches')}
+function stop(){if(src){try{src.stop()}catch(e){}src=null}playing=false;bus.audio=false;$('#g-play').textContent='▶ петля';[...gm.children].forEach(c=>c.classList.remove('on'));
+ if(heroMode==='demon'&&!demonTimer)toPod();if(heroMode==='podmenysh')setState('СМОТРИТ')}
 async function play(){const v=document.querySelector('video');if(v&&!v.paused)v.pause();
  const b=await buf(cur);if(ac.state==='suspended')await ac.resume();if(src){try{src.stop()}catch(e){}}
  an=an||ac.createAnalyser();an.fftSize=512;an.connect(ac.destination);src=ac.createBufferSource();src.buffer=b;src.loop=true;src.connect(an);t0=ac.currentTime+.05;src.start(t0);lastPos=-0.06;
- playing=true;bus.audio=true;$('#g-play').textContent='■ stop';const p=PARTS[cur];
+ playing=true;bus.audio=true;$('#g-play').textContent='■ стоп';const p=PARTS[cur];
  clearTimeout(demonTimer);demonTimer=null;
- if(p.calm){setTimeout(()=>{if(playing&&PARTS[cur].calm)toDemon(p.f==='08-outro'?'ГНИЛЬ · it rots off':'calm song · it leaves')},1500)}else{toPod();setState('ЖРЁТ','it feeds')}
+ if(p.calm){setTimeout(()=>{if(playing&&PARTS[cur].calm)toDemon(p.f==='08-outro'?'ГНИЛЬ':'тихо · он ушёл')},1500)}else{toPod();setState('ЖРЁТ')}
  loop()}
 function loop(){if(!playing)return;const d=new Uint8Array(an.fftSize);an.getByteTimeDomainData(d);let m=0;for(const x of d)m=Math.max(m,Math.abs(x-128));
  const lv=Math.min(1,m/128*1.5);bus.level=lv;[...gm.children].forEach((c,i)=>c.classList.toggle('on',i<Math.round(lv*20)));
@@ -675,7 +727,7 @@ function show(i){cur=i;const p=PARTS[i];$$('.tile').forEach((t,k)=>{t.classList.
  $('#g-sc').innerHTML=p.sc.map(n=>`<figure><img class="px" loading="lazy" src="${gif(n)}" alt="${SC[n][0]}"><figcaption>${SC[n][0]}</figcaption></figure>`).join('');
  if(playing)play()}
 const tabs=$('#tabs');PARTS.forEach((p,i)=>{const b=document.createElement('button');b.className='tile';b.setAttribute('role','tab');b.setAttribute('aria-label',`${p.t}, ${p.r}: ${p.b[0]}`);
- b.innerHTML=`<img class="px" loading="lazy" src="${gif(p.img)}" alt=""><span class="badge ${p.b[1]}">${p.b[0]}</span><span class="n">${String(i+1).padStart(2,'0')}</span><span class="lab"><small>${p.t}</small><b>${p.r}</b></span>`;
+ b.innerHTML=`<img class="px" loading="lazy" src="${gif(p.img)}" alt=""><span class="badge ${p.b[1]}">${p.b[0]}</span><span class="n">${String(i+1).padStart(2,'0')}</span><span class="lab"><small>${p.r}</small><b>${p.t}</b></span>`;
  b.onclick=()=>show(i);tabs.appendChild(b)});
 show(0);
 document.querySelector('video').addEventListener('play',()=>{if(playing)stop()});
@@ -689,6 +741,10 @@ document.querySelector('video').addEventListener('play',()=>{if(playing)stop()})
  spots.forEach(([sx,sy],n)=>{const m=M[ks[n%ks.length]];x.fillStyle=n%3===0?'#2B1219':'#1E0C11';m.forEach((r,y)=>[...r].forEach((v,xx)=>{if(v==='1')x.fillRect(sx+xx*4,sy+y*4,4,4)}))});
  x.fillStyle='#24101a';x.font='700 10px monospace';x.fillText('НЕ ОН',96,70);x.fillText('ШУМ',30,244);
  $('#foot').style.backgroundImage=`url(${c.toDataURL()})`})();
+
+/* ---------- download: copy the commands ---------- */
+$('#copy').onclick=async()=>{const b=$('#copy');let ok=false;try{await navigator.clipboard.writeText($('#cmd').textContent);ok=true}catch(e){const r=document.createRange();r.selectNodeContents($('#cmd'));const s=getSelection();s.removeAllRanges();s.addRange(r)}
+ b.textContent=ok?'скопировано':'выделено · ctrl+c';setTimeout(()=>b.textContent='копировать',2200)};
 
 initGate();initHero();
 </script>
