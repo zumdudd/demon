@@ -35,3 +35,4 @@ Map of the code: `lib/zarya/INDEX.md` · history: `CHANGELOG.md` · structure: `
 **Mods welcome.** Use it, change it, make your own version, even sell it. Credit ШУМ and keep your version open.
 Code: GNU GPL v3 (`LICENSE`). Characters, art and music: CC BY-SA 4.0 (`LICENSE-ART.md`).
 Copies taken before 2026-11-20 keep MIT / CC BY 4.0.
+Terms, obligations and enforcement: `LEGAL.md`.
