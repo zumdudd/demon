@@ -32,4 +32,6 @@ Linux Mint (Cinnamon, X11), Python 3 + GTK3 + cairo, PipeWire + `cava`. Built fo
 Map of the code: `lib/zarya/INDEX.md` · history: `CHANGELOG.md` · structure: `MODULES.md`.
 
 ## License
-Code: MIT (`LICENSE`). Characters, art and music: CC BY 4.0 (`LICENSE-ART.md`).
+**Mods welcome.** Use it, change it, make your own version, even sell it. Credit ШУМ and keep your version open.
+Code: GNU GPL v3 (`LICENSE`). Characters, art and music: CC BY-SA 4.0 (`LICENSE-ART.md`).
+Copies taken before 2026-11-20 keep MIT / CC BY 4.0.
