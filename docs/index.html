@@ -232,6 +232,8 @@ pre.code em{font-style:normal;color:var(--dim)}
 .build p{margin:0;font-size:15px;color:var(--mut)}.build b{font:900 16px var(--disp);color:var(--ink)}
 @media(max-width:480px){.build{flex-direction:column;align-items:flex-start}}
 @media (prefers-reduced-motion:reduce){.ticker div,.st-rec::before{animation:none}}
+/* doors to the other pages: hard edges, visible on phones too (nav links hide below 1040px) */
+.more{border-top:2px solid var(--line2)}.more a{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 24px;padding:30px 0;border-bottom:2px solid var(--line2);text-decoration:none}.more b{font:900 clamp(44px,10vw,130px)/1 var(--disp);letter-spacing:-.04em}.more i{font:400 15px var(--mono);font-style:normal;color:var(--mut)}.more a:hover{background:var(--red);color:var(--void)}.more a:hover i{color:var(--void)}
 </style>
 </head>
 <body>
@@ -251,7 +253,7 @@ pre.code em{font-style:normal;color:var(--dim)}
 </div>
 
 <nav><div class="wrap"><a class="brand" href="#top" id="sig" aria-label="ДЕМОН & ПОДМЕНЫШ">ПОДМЕНЫ<span class="w">Щ</span></a>
-<div class="links"><a href="#film">PV</a><a href="#genres">Корми</a><a href="#who">Не он</a><a href="#gallery">Галерея</a><a href="#how">Как</a><a href="#words">Слова</a><a href="#get">Скачать</a><a href="https://github.com/zumdudd/demon">GitHub</a></div>
+<div class="links"><a href="#film">PV</a><a href="#genres">Корми</a><a href="#who">Не он</a><a href="#gallery">Галерея</a><a href="#how">Как</a><a href="#words">Слова</a><a href="#get">Скачать</a><a href="plenki/">Плёнки</a><a href="sledy/">Следы</a><a href="https://github.com/zumdudd/demon">GitHub</a></div>
 <span class="eye" id="eye" aria-hidden="true"><i></i></span></div></nav>
 
 <main id="top">
@@ -342,7 +344,7 @@ pre.code em{font-style:normal;color:var(--dim)}
 
 <section id="get"><div class="wrap">
  <div class="sh"><span class="num">[07]</span><h2 class="t" aria-label="скачать">скач<span class="w" aria-hidden="true">ю</span>ть</h2></div>
- <p class="sub">Всё лежит в открытом репо. Код MIT, арт и музыка CC BY 4.0.</p>
+ <p class="sub">Всё лежит в открытом репо. Код GNU GPL v3, арт и музыка CC BY-SA 4.0.</p>
  <div class="get">
   <div class="card p"><div class="bar"><span>▚▚ ЗАПУСК · руками</span><b>LINUX</b></div>
    <p class="mut">Нужно: Linux Mint (Cinnamon, X11), Python 3, GTK3, cairo, PipeWire, cava.</p>
@@ -372,6 +374,7 @@ zarya-daemon-desk</pre>
    </ul></div>
  </div>
 </div></section>
+<div class="wrap more"><a href="plenki/"><b>плёнки</b><i>что крутит ШУМ</i></a><a href="sledy/"><b>следы</b><i>из чего сделан шум</i></a></div>
 </main>
 
 <footer id="foot"><div class="wrap">
@@ -380,7 +383,8 @@ zarya-daemon-desk</pre>
  <div class="cols">
   <div><p class="who">ДЕМОН &amp; ПОДМЕНЫШ by ШУМ <span class="rom">shum · noise</span></p>
   <p>Идея и направление: ШУМ. Сделано с Claude (Anthropic).<br>
-  Код: MIT · Арт: CC BY 4.0 · Музыка: ШУМ × Claude, синтез с нуля, CC BY 4.0.<br>
+  Код: GNU GPL v3 · Арт: CC BY-SA 4.0 · Музыка: ШУМ × Claude, синтез с нуля, CC BY-SA 4.0.<br>
+   <a href="https://github.com/zumdudd/demon/blob/main/LEGAL.md">LEGAL</a> · 
   <a href="https://github.com/zumdudd/demon">github.com/zumdudd/demon</a></p></div>
   <button class="pill" id="banish">✕ изгнать</button>
  </div>
